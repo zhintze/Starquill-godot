@@ -86,7 +86,7 @@ Unity Editor integration via Coplay MCP (file-based RPC through `Temp/Coplay/MCP
 - Unity 6 `BuildProfileContext` NullReferenceException on Linux: delete `Library/BuildProfileContext.asset`
 - `System.Random` vs `UnityEngine.Random` ambiguity: qualify `UnityEngine.Random.Range()`
 - If `SerializeField` references appear null at runtime, rebuild the scene (Tools > Build Explore Scene) and save; scene rebuild fixes serialization
-- Input System: `activeInputHandler=2` (Both); EventSystem needs `StandaloneInputModule`
+- Input System: `activeInputHandler=0` (Input Manager only, set 2026-07-02: Both is unsupported on Android; no code uses the Input System API); EventSystem needs `StandaloneInputModule`
 - `IReadOnlyList.Contains()` requires `using System.Linq;`
 - RectTransform: never use `anchoredPosition` across different parent hierarchies; convert via world position
 - Variance colors serialize as flat `float[]` + `int[]` keys for JsonUtility compatibility
