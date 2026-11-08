@@ -51,4 +51,5 @@ Resolved decisions (character level-up in MVP, rewarded ads in MVP, reward mailb
 - Destinations Sprints D2-D3 (`docs/plans/2026-07-02-destinations-design.md`): D2 Locations — fragment consumer, procedurally generated one-time visits, dialogue-tree finales (recruit/loot/boost/quest/boss/gold outcomes); D3 — more location parts, key art, destinations balance-sim branch
 - Prestige with Stellar Ink (master design §Prestige; `prestigeMultiplier` stubbed at 1.0 throughout)
 - Verb drops/collection (`docs/verb-stat-system-design-doc.md`; verbs currently come with the character)
+- Save file protection: the local save (`SaveManager`/`SaveData`) is plain JSON, so gold, gear and quest level can be edited by hand; sign or encrypt it (no design yet)
 - Additional species, quest zones, seasonal events, social features
