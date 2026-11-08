@@ -211,5 +211,42 @@ namespace Starquill.Tests.Equipment
                 Assert.AreEqual(Rarity.Legendary,
                     EquipmentFactory.RollRarityWithFloor(1, Rarity.Legendary, new System.Random(seed)));
         }
+
+        [Test]
+        public void CreateRandom_NeverRollsAMissingVariant()
+        {
+            var data = new Starquill.Data.Art.ArtTableData();
+            data.equipment.Add(new Starquill.Data.Art.EquipmentRow
+            {
+                itemType = "tr08", description = "coat", layerCodes = new[] { 14 }, variants = new[] { 102, 104 }
+            });
+            var catalog = new EquipmentCatalog();
+            catalog.Load(data);
+            var f = new EquipmentFactory(catalog, new AbilityTable(), Starquill.Tests.Fixtures.ArtFixtures.RgbColors());
+            var rng = new System.Random(7);
+
+            var seen = new System.Collections.Generic.HashSet<int>();
+            for (int i = 0; i < 5000; i++) seen.Add(f.CreateRandom("tr", Rarity.Common, rng).ItemNum);
+
+            CollectionAssert.AreEquivalent(new[] { 102, 104 }, seen);
+        }
+
+        [Test]
+        public void Reconstruct_WeaponVariantThatNoLongerExists_FallsBackToAnExistingOne()
+        {
+            // Shields (w08/w09) are not modular and keep no per-layer numbers.
+            var rng = new System.Random(3);
+            EquipmentInstance saved;
+            do saved = factory.CreateRandomWeapon(Rarity.Common, rng);
+            while (!catalog.GetWeapon(saved.ItemType).Modular);
+            var data = SerializedEquipment.FromInstance(saved);
+            data.layerVariants = new[] { 999, 999, 999 };
+
+            var rebuilt = factory.Reconstruct(data);
+
+            var entry = catalog.GetWeapon(rebuilt.ItemType);
+            for (int i = 0; i < rebuilt.LayerVariants.Length; i++)
+                CollectionAssert.Contains(entry.VariantsPerLayer[i], rebuilt.LayerVariants[i]);
+        }
     }
 }

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using Starquill.Core;
-using UnityEngine;
+using Starquill.Data;
+using Starquill.Data.Art;
 
 namespace Starquill.Equipment
 {
@@ -8,7 +10,7 @@ namespace Starquill.Equipment
     {
         public string ItemType;
         public string Description;
-        public int Amount;
+        public int[] Variants;
         public int[] LayerCodes;
         public int[] HiddenLayers;
         public int[] LayerColorVariance;
@@ -19,7 +21,7 @@ namespace Starquill.Equipment
     {
         public string ItemType;
         public string Description;
-        public int[] AmountPerLayer;
+        public int[][] VariantsPerLayer;
         public int[] LayerCodes;
         public int[] HiddenLayers;
         public int[] LayerColorVariance;
@@ -36,77 +38,42 @@ namespace Starquill.Equipment
         private readonly Dictionary<string, List<CatalogEntry>> byPrefix = new();
         private readonly Dictionary<string, WeaponEntry> weaponsByType = new();
 
-        public void LoadFromResources()
+        public void LoadFromResources() => Load(ArtTables.LoadFromResources());
+
+        public void Load(ArtTableData data)
         {
-            var eqAsset = Resources.Load<TextAsset>("Data/equipment");
-            if (eqAsset != null) LoadEquipmentJson(eqAsset.text);
+            AllEntries.Clear(); byType.Clear(); byPrefix.Clear();
+            WeaponEntries.Clear(); weaponsByType.Clear();
 
-            var wpnAsset = Resources.Load<TextAsset>("Data/weapons");
-            if (wpnAsset != null) LoadWeaponsJson(wpnAsset.text);
-        }
-
-        public void LoadEquipmentJson(string json)
-        {
-            AllEntries.Clear();
-            byType.Clear();
-            byPrefix.Clear();
-
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
+            foreach (var row in data.equipment)
             {
+                if (string.IsNullOrEmpty(row.itemType) || row.variants == null || row.variants.Length == 0)
+                    continue; // no art yet: never rolled (the bake already warned)
                 var entry = new CatalogEntry
                 {
-                    ItemType = obj.GetString("item_type"),
-                    Description = obj.GetString("description"),
-                    Amount = obj.GetInt("amount", 1),
-                    LayerCodes = obj.GetIntArray("layer_codes"),
-                    HiddenLayers = obj.GetIntArray("hidden_layers"),
-                    LayerColorVariance = obj.GetIntArray("layer_color_variance"),
-                    Modular = obj.GetBool("modular")
+                    ItemType = row.itemType, Description = row.description, Variants = row.variants,
+                    LayerCodes = row.layerCodes, HiddenLayers = row.hiddenLayers,
+                    LayerColorVariance = row.colorVarianceLayers, Modular = false
                 };
-
-                if (string.IsNullOrEmpty(entry.ItemType) || entry.Amount <= 0)
-                    continue;
-
                 AllEntries.Add(entry);
                 byType[entry.ItemType] = entry;
-
-                string prefix = entry.ItemType.Length >= 2
-                    ? entry.ItemType.Substring(0, 2).ToLower()
-                    : entry.ItemType;
-                if (!byPrefix.ContainsKey(prefix))
-                    byPrefix[prefix] = new List<CatalogEntry>();
-                byPrefix[prefix].Add(entry);
+                string prefix = entry.ItemType.Substring(0, 2);
+                if (!byPrefix.TryGetValue(prefix, out var list)) byPrefix[prefix] = list = new List<CatalogEntry>();
+                list.Add(entry);
             }
-        }
 
-        public void LoadWeaponsJson(string json)
-        {
-            WeaponEntries.Clear();
-            weaponsByType.Clear();
-
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
+            foreach (var row in data.weapons)
             {
+                var perLayer = row.variantsPerLayer.Select(l => l.values ?? System.Array.Empty<int>()).ToArray();
+                if (string.IsNullOrEmpty(row.itemType) || perLayer.Length == 0 || perLayer.Any(v => v.Length == 0))
+                    continue;
                 var entry = new WeaponEntry
                 {
-                    ItemType = obj.GetString("item_type"),
-                    Description = obj.GetString("description"),
-                    LayerCodes = obj.GetIntArray("layer_codes"),
-                    HiddenLayers = obj.GetIntArray("hidden_layers"),
-                    LayerColorVariance = obj.GetIntArray("layer_color_variance"),
-                    Modular = obj.GetBool("modular"),
-                    HandType = obj.GetString("hand_type", "one_handed")
+                    ItemType = row.itemType, Description = row.description, VariantsPerLayer = perLayer,
+                    LayerCodes = row.layerCodes, HiddenLayers = row.hiddenLayers,
+                    LayerColorVariance = row.colorVarianceLayers, Modular = row.modular,
+                    HandType = string.IsNullOrEmpty(row.handType) ? "one_handed" : row.handType
                 };
-
-                // Amount can be int or int[] depending on modular
-                if (entry.Modular)
-                    entry.AmountPerLayer = obj.GetIntArray("amount");
-                else
-                    entry.AmountPerLayer = new[] { obj.GetInt("amount", 1) };
-
-                if (string.IsNullOrEmpty(entry.ItemType)) continue;
-
                 WeaponEntries.Add(entry);
                 weaponsByType[entry.ItemType] = entry;
             }

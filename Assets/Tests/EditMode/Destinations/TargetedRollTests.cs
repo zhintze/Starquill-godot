@@ -73,26 +73,7 @@ namespace Starquill.Tests.Destinations
 
         private LootDropper MakeDropper(float dropRate)
         {
-            var catalog = new EquipmentCatalog();
-            catalog.LoadEquipmentJson(@"[
-                {""item_type"":""hd01"",""description"":""helmet"",""amount"":3,
-                 ""layer_codes"":[10],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false},
-                {""item_type"":""tr01"",""description"":""tunic"",""amount"":2,
-                 ""layer_codes"":[20],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false},
-                {""item_type"":""ar01"",""description"":""bracers"",""amount"":2,
-                 ""layer_codes"":[30],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false},
-                {""item_type"":""lg01"",""description"":""pants"",""amount"":2,
-                 ""layer_codes"":[40],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false},
-                {""item_type"":""fe01"",""description"":""boots"",""amount"":2,
-                 ""layer_codes"":[45],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false},
-                {""item_type"":""mc01"",""description"":""ring"",""amount"":2,
-                 ""layer_codes"":[48],""hidden_layers"":[],""layer_color_variance"":[],""modular"":false}
-            ]");
-            catalog.LoadWeaponsJson(@"[
-                {""item_type"":""w01"",""description"":""sword"",""amount"":2,
-                 ""layer_codes"":[50],""hidden_layers"":[],""layer_color_variance"":[],
-                 ""modular"":false,""hand_type"":""one_handed""}
-            ]");
+            var catalog = ArtFixtures.SixSlotCatalog();
 
             var abilityTable = new AbilityTable();
             var colors = ArtFixtures.RgbColors();

@@ -51,7 +51,7 @@ namespace Starquill.Equipment
             if (entries.Count == 0) return null;
 
             var entry = entries[rng.Next(entries.Count)];
-            int itemNum = rng.Next(1, entry.Amount + 1);
+            int itemNum = entry.Variants[rng.Next(entry.Variants.Length)];
             var slot = EquipmentCatalog.SlotForPrefix(prefix);
             var baseColor = colors.GetRandomColor("main", rng, modifiers?.ColorFamily);
 
@@ -105,17 +105,20 @@ namespace Starquill.Equipment
 
             int itemNum;
             int[] layerVariants = null;
-            if (entry.Modular && entry.AmountPerLayer.Length > 0)
+            if (entry.Modular && entry.VariantsPerLayer.Length > 0)
             {
-                layerVariants = new int[entry.AmountPerLayer.Length];
-                for (int i = 0; i < entry.AmountPerLayer.Length; i++)
-                    layerVariants[i] = rng.Next(1, entry.AmountPerLayer[i] + 1);
+                layerVariants = new int[entry.VariantsPerLayer.Length];
+                for (int i = 0; i < layerVariants.Length; i++)
+                {
+                    var options = entry.VariantsPerLayer[i];
+                    layerVariants[i] = options[rng.Next(options.Length)];
+                }
                 itemNum = layerVariants[0];
             }
             else
             {
-                itemNum = entry.AmountPerLayer.Length > 0
-                    ? rng.Next(1, entry.AmountPerLayer[0] + 1) : 1;
+                var options = entry.VariantsPerLayer[0];
+                itemNum = options[rng.Next(options.Length)];
             }
 
             var varianceColors = new Dictionary<int, Color>();
@@ -428,25 +431,20 @@ namespace Starquill.Equipment
             }
 
             var lv = data.layerVariants;
-            if (lv == null && modular && weaponEntry != null && weaponEntry.AmountPerLayer.Length > 0)
+            if (weaponEntry != null && modular && weaponEntry.VariantsPerLayer.Length > 0)
             {
-                lv = new int[weaponEntry.AmountPerLayer.Length];
-                for (int i = 0; i < lv.Length; i++)
-                    lv[i] = 1;
-            }
-            else if (lv != null && weaponEntry != null && weaponEntry.AmountPerLayer.Length > 0)
-            {
-                // Migrate saves that predate weapon data corrections: clamp
-                // variants (and array length) to the current per-layer counts
-                // so stale rolls never request missing sprites.
-                int len = Math.Min(lv.Length, weaponEntry.AmountPerLayer.Length);
-                var clamped = new int[weaponEntry.AmountPerLayer.Length];
-                for (int i = 0; i < clamped.Length; i++)
+                // Keep saved numbers that still exist; anything missing (art
+                // renumbered or deleted, or saves that predate per-layer data)
+                // falls back to the first existing number, so a saved weapon
+                // never asks for a sprite that is not there.
+                var fixedLv = new int[weaponEntry.VariantsPerLayer.Length];
+                for (int i = 0; i < fixedLv.Length; i++)
                 {
-                    int v = i < len ? lv[i] : 1;
-                    clamped[i] = Math.Clamp(v, 1, Math.Max(1, weaponEntry.AmountPerLayer[i]));
+                    var options = weaponEntry.VariantsPerLayer[i];
+                    int v = lv != null && i < lv.Length ? lv[i] : -1;
+                    fixedLv[i] = System.Array.IndexOf(options, v) >= 0 ? v : options[0];
                 }
-                lv = clamped;
+                lv = fixedLv;
             }
 
             return new EquipmentInstance(
