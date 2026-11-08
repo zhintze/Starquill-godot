@@ -31,7 +31,7 @@ Done when (Stage B1, this handoff):
 | Phase B plan | done | `08b23989` |
 | B1 1-13 | in progress (rows below) | Editor opened by Zach 2026-11-08; Coplay connected |
 | B1 T1-2 asmdef, sprite source | done | `e2615d67`; compile clean; probe: `ImageResolver(ISpriteSource)`, `MissingPaths`, `CharacterDisplay.Initialize(ImageResolver,Int32)`, `ImageResolverTests` present |
-| B1 T3 PixelOps | done | compile clean; probe: `PixelOps` 5 methods, `PixelOpsTests` 5 tests; commit below (doc rides in the same commit) |
+| B1 T3 PixelOps | done | `29679a15`; compile clean; probe: `PixelOps` 5 methods, `PixelOpsTests` 5 tests |
 
 ## Decision map
 
