@@ -48,11 +48,11 @@ The old affix system (`AffixTable`, `RolledAffix`, `affixes.json`, `StatMods`) i
 
 ### Paper Doll Display
 
-`DisplayBuilder` 4-stage pipeline → `CharacterDisplay` RenderTexture compositing (400x400, bilinear). Layer codes and color variance come from equipment JSON; palettes from `ColorManager`.
+`DisplayBuilder` 4-stage pipeline → `CharacterDisplay` RenderTexture compositing (400x400, bilinear). Layer codes and color variance come from the art tables (`Assets/Data/ArtTables/`); palettes from `ColorManager`.
 
 ### Data Loading
 
-JSON in `Assets/Resources/Data/` (equipment, weapons, abilities, species, speciesModularParts, names, color_palettes), parsed via MiniJSON + SimpleJson helpers in the Core assembly. ScriptableObject configs in `Assets/Data/Config/` (DefaultEconomyConfig, DefaultAdvantageMatrix). `EconomyConfig` holds all tuning knobs and economy formulas (EnemyHP, GoldPerKill, UpgradeCost, OfflineGold).
+Art data (equipment, weapons, species, part groups, palettes) is CSV in `Assets/Data/ArtTables/`, baked into `Resources/ArtTables.asset`; never add art counts by hand (variant numbers come from the image files). Game data (abilities, names, quest zones, color family overrides) stays JSON in `Assets/Resources/Data/`, parsed via MiniJSON + SimpleJson helpers in the Core assembly. `dotnet test tools/ArtTablesTests` runs the art table tests headless. ScriptableObject configs in `Assets/Data/Config/` (DefaultEconomyConfig, DefaultAdvantageMatrix). `EconomyConfig` holds all tuning knobs and economy formulas (EnemyHP, GoldPerKill, UpgradeCost, OfflineGold).
 
 ## Development Workflow
 
@@ -65,6 +65,7 @@ Tests **cannot run headless on this machine** (Arch Linux batch-mode issue). Use
 - **Tools > Setup GameManager**: creates ScriptableObjects + GameManager + fixes EventSystem
 - **Tools > Build Explore Scene**: rebuilds the ExploreScene hierarchy from scratch (`Assets/Editor/ExploreSceneBuilder.cs`). Always save the scene after.
 - `Assets/Editor/ClearSave.cs`: wipes save data
+- **Tools > Art Tables > Bake Now / Check Images**: rebuild `ArtTables.asset` from the CSVs; report empty and duplicate images
 
 ### Scenes
 
@@ -90,4 +91,6 @@ Unity Editor integration via Coplay MCP (file-based RPC through `Temp/Coplay/MCP
 - `IReadOnlyList.Contains()` requires `using System.Linq;`
 - RectTransform: never use `anchoredPosition` across different parent hierarchies; convert via world position
 - Variance colors serialize as flat `float[]` + `int[]` keys for JsonUtility compatibility
+- `ArtTables.asset` is generated; if it is missing or stale, Tools > Art Tables > Bake Now. A scripted `AssetDatabase.Refresh` only queues the auto-bake (it runs once the Editor window has focus); call `ArtTablesBaker.Bake()` directly when scripting
+- Art PNGs: one folder per type (`equipment/hd01/`, `species/f01/`, `species/body/`); move files with their `.meta`
 - `com.unity.purchasing` is on the 5.x line (the 4.x line produced package errors in Unity 6); it is installed but unused until Shop/IAP work begins

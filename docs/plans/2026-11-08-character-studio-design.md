@@ -1,7 +1,7 @@
 # Character Studio: Design
 
 **Date:** 2026-11-08
-**Status:** Approved (brainstorm with Zach, 2026-11-08). Implementation plan to follow in `2026-11-08-character-studio-plan.md`.
+**Status:** Approved (brainstorm with Zach, 2026-11-08). Phase A (art tables) implemented 2026-11-08 per `2026-11-08-character-studio-plan.md` Tasks 1-17; Phase B (studio app) not started.
 **Branch:** `unity-idle-clicker`
 
 ## Goal

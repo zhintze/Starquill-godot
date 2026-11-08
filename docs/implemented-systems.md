@@ -9,7 +9,7 @@
 
 Unity 6 (6000.3.8f1) mobile idle RPG clicker, portrait 1080x1920, IL2CPP. A party of 4 paper-doll characters auto-battles enemy waves. The player taps Verbs (pooled party abilities) to exploit a dual-triangle advantage system. Loot drops feed a collection/equip loop that visibly changes characters.
 
-**Assemblies:** `Core → Data → Combat / Characters / Equipment / Exploration / Display / Quests / Destinations → Managers`, with `UI` and `Services` alongside. Tests in `EditModeTests` (59 files, ~460 test methods). The empty `Starquill.Economy` assembly was removed 2026-07-01; economy code lives in Data (`EconomyConfig`) and Equipment (`SellCalculator`, `PityTracker`).
+**Assemblies:** `Core → Data → Combat / Characters / Equipment / Exploration / Display / Quests / Destinations → Managers`, with `UI` and `Services` alongside. Tests in `EditModeTests` (556 test cases in the Test Runner, 2026-11-08). `Assets/Scripts/Data/Art/` (art tables: CSV reader, file name parser, converter, repo reader) is pure C# with no `UnityEngine`; it and `Assets/Tests/EditMode/Art/` also compile headless in `tools/ArtTablesTests` (`dotnet test`). The empty `Starquill.Economy` assembly was removed 2026-07-01; economy code lives in Data (`EconomyConfig`) and Equipment (`SellCalculator`, `PityTracker`).
 
 ---
 
@@ -66,7 +66,7 @@ Formulas: `EnemyHP(questLevel)`, `GoldPerKill(questLevel, chaBonus, prestigeMult
 ## 4. Characters (`Assets/Scripts/Characters/`)
 
 - `CharacterInstance`: species + stats + 11 equipment slots.
-- `CharacterFactory` + `NameGenerator`: random character generation from `species.json` + `names.json`.
+- `CharacterFactory` + `NameGenerator`: random character generation from the art tables' species rows + `names.json`.
 - `CharacterRoster` / `Party`: roster of owned characters; active party of 4.
 - `AutoEquipper`: best-in-slot per slot from inventory (uses `ItemComparer`), returns displaced items.
 
@@ -87,7 +87,7 @@ Every `EquipmentInstance` carries:
 3. `GetTotalStatMods()` = stat pair + ability potency on the ability's boosted stat.
 
 ### Pipeline
-- `EquipmentCatalog`: loads `equipment.json` + `weapons.json` (armor prefixes hd/tr/ar/lg/fe/mc; weapons w01-w07, shields w08-w09; modular weapons with per-layer variants)
+- `EquipmentCatalog`: loads the baked art tables (armor prefixes hd/tr/ar/lg/fe/mc; weapons w01-w07, shields w08-w09; modular weapons with per-layer variants). Each entry holds the variant numbers that exist on disk; rolls pick only from those, and `Reconstruct` maps a saved weapon part number that no longer exists to the first existing one
 - `EquipmentFactory`: `CreateRandom`, `CreateRandomWeapon`, `CreateRandomLoadout(questLevel)`, `CreateStarterLoadout`, `RollRarity(questLevel)`, `Reconstruct(SerializedEquipment)`
 - `LootDropper`: per-kill drop roll (baseDropRate) + rarity roll + 70% armor / 30% weapon + `PityTracker` integration
 - `LootInventory`: capacity 50, add/remove/filter, events
@@ -97,7 +97,9 @@ Every `EquipmentInstance` carries:
 
 ## 6. Display (`Assets/Scripts/Display/`)
 
-Paper doll rendering: `DisplayBuilder` 4-stage pipeline (species parts → equipment layers → color application → composite order) → `CharacterDisplay` RenderTexture compositing at 400x400 bilinear. `ColorManager` loads `color_palettes.json`. `ImageResolver`/`ImageToken` map layer codes to sprites. `CharacterPortraitRenderer` for UI portraits.
+Paper doll rendering: `DisplayBuilder` 4-stage pipeline (species parts → equipment layers → color application → composite order) → `CharacterDisplay` RenderTexture compositing at 400x400 bilinear. `ColorManager` loads palettes from the art tables. `ImageResolver`/`ImageToken` map layer codes to sprites. `CharacterPortraitRenderer` for UI portraits.
+
+**Art tables (2026-11-08).** The art rules live only in six CSVs in `Assets/Data/ArtTables/`: `equipment.csv`, `weapons.csv`, `species.csv`, `species_parts.csv` (part group layers, formerly hardcoded), `species_skin_variance.csv`, `palettes.csv` (one row per color). `ArtTablesBaker` (Editor) converts them plus a scan of `Assets/Resources/Images` into `Assets/Resources/ArtTables.asset` (generated, gitignored) on Editor load if missing, whenever a CSV or art PNG changes (runs on the Editor's next update, which on Linux waits for window focus), before every build (table errors fail the build), and from Tools > Art Tables > Bake Now. `DisplayDataRegistry`, `EquipmentCatalog` and `ColorManager` read the asset. Variant numbers come from the files on disk, gaps allowed; nothing stores a count. A variant counts only when every layer of its item or part group has a file; the bake warns about missing layers, misnamed files, folders with no row and rows with no images. Images sit in one folder per type: `equipment/hd01/hd01-0001-130.png`, `weapons/w01/w01-164-0001.png`, `species/body/0001-016.png`, `species/f01/f01-0001-084.png`. `ArtImageAudit` (Tools > Art Tables > Check Images, and before builds) reports empty images and pixel-identical layers within a type.
 
 ## 7. Exploration (`Assets/Scripts/Exploration/`)
 
@@ -141,7 +143,9 @@ Design system: `UiTheme` tokens (type floor 28px, touch >= 120px) + `UiFactory` 
 - `SetupGameManager` (Tools menu): creates config assets + GameManager + EventSystem fix
 - `ExploreSceneBuilder` (Tools menu): full scene rebuild; always save scene after
 - `ClearSave`: wipes local save
-- `SpriteImportFixer`: import settings for paper-doll sprites
+- `ArtTablesBaker` (Tools > Art Tables): Bake Now, Check Images. New PNGs under `Assets/Resources/Images/` get the paper-doll sprite import settings automatically (Sprite, 100 PPU, Bilinear, max 256, uncompressed, no mipmaps); this replaced the manual `SpriteImportFixer`.
+- `tools/ArtTablesTests`: `dotnet test tools/ArtTablesTests` runs the art table tests headless; `--filter Category=RepoData` converts the real CSVs and images.
+- `tools/migrate_art_tables.py`: one-time migration (run 2026-11-08): `0000` part cleanup, one folder per type, art JSON to CSV. Kept for history; its `csv` step refuses to run now that the JSON is gone.
 
 ---
 
