@@ -1,6 +1,6 @@
 # Character Studio Progress and Resume Notes
 
-2026-11-08 (updated 2026-11-08: Phase A done; handoff to a fresh session for Phase B Stage B1) · Read this before resuming.
+2026-11-08 (updated 2026-11-08: Stage B1 Tasks 1-13 committed; waiting at CHECKPOINT D) · Read this before resuming.
 
 Mandate: "creating a standalone character selector/generator ... that exports generated and curated characters into standalone separate images with a transparent background as a png file for use in promotional content", built on "our current object oriented system", with the art rules "only storing in one place to avoid [them getting unsynced]" and "human readable AND make for easy git diffs" (Zach, 2026-11-08).
 
@@ -29,7 +29,7 @@ Done when (Stage B1, this handoff):
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
 | Phase A (Tasks 1-17) | done, checkpoints A, B, C green | 18 commits `1756e7fa`..`f88cb6c2`; Test Runner 554/556 (2 known old failures), results file 2026-11-08 14:50; `dotnet test tools/ArtTablesTests` 73 passed, RepoData 3 expected warnings |
 | Phase B plan | done | `08b23989` |
-| B1 1-13 | in progress (rows below) | Editor opened by Zach 2026-11-08; Coplay connected |
+| B1 1-13 | done, CHECKPOINT D pending | `e2615d67`..`d9216355` (12 commits, Tasks 1-2 share one); rows below |
 | B1 T1-2 asmdef, sprite source | done | `e2615d67`; compile clean; probe: `ImageResolver(ISpriteSource)`, `MissingPaths`, `CharacterDisplay.Initialize(ImageResolver,Int32)`, `ImageResolverTests` present |
 | B1 T3 PixelOps | done | `29679a15`; compile clean; probe: `PixelOps` 5 methods, `PixelOpsTests` 5 tests |
 | B1 T4 DiskSpriteSource | done | `a39243c7`; compile clean; probe: `DiskSpriteSource(String)`, `FilePathFor`, `Load`, `Dispose`; 3 tests |
@@ -39,6 +39,9 @@ Done when (Stage B1, this handoff):
 | B1 T8 StudioRenderer, ExportNamer | done | `e340014d`; compile clean; smoke call (human, seed 42): 2x full export 400x400 RGBA with transparent corner, trimmed 271x358; 0 missing sprites; edge pixels dark from the art's own outlines (source art edge mean rgb 1,1,1), no fringe |
 | B1 T9 pixel match test | done | `f6075d3e`; compile clean; same check run as a smoke call: opaque 43246, differ(>2) 4 (0.00%), max diff 6. Zach's Test Runner run is the record |
 | B1 T10 StudioSettings | done | `5269cfc4`; compile clean; probe: `Load`, `Save`, `SnapScale`, `ResolvedExportFolder`; 3 tests (7 cases) |
+| B1 T11 StudioUi | done | `99ee8c70`; compile clean; probe: `StudioUi` 15 helpers |
+| B1 T12 StudioApp, picker, Bulk, Warnings | done | `fc54fd8c`; compile clean; probe: `StudioApp`, `RepoPickerView`, `WarningsView`, `BulkScreen`. Deviation: `StudioApp.renderer` renamed `studioRenderer` (CS0108: hid `Component.renderer`); reflection confirms the rename compiled |
+| B1 T13 scene, build menu, builds | done; CHECKPOINT D waiting for Zach | `d9216355`. Scene created, build list still only ExploreScene. Editor smoke (play + scripted clicks): 8 cards drawn, Lock survives Randomize All and Equip Random, Reroll, Count 64 builds 64 cards, Export wrote 8 trimmed RGBA PNGs with transparent corners; no studio errors in the log. Builds: Linux Succeeded 91 MB on disk (report 89 MB), 350 s; Windows Succeeded 96 MB on disk (report 94 MB), 235 s, 38 MB zipped. Deviations: (1) `CreateScene` first calls `SaveCurrentModifiedScenesIfUserWantsTo` (as written it silently dropped unsaved scene work); (2) `Build` sets the scripting backend only when it is not already Mono, and calls `AssetDatabase.SaveAssets()` after restoring: the first Linux build had left the studio's product name, window size, mode and a `Standalone: 0` line in `ProjectSettings.asset`; restored and verified identical to the pre-build diff, and the Windows build with the fix left it unchanged |
 
 ## Decision map
 
@@ -84,7 +87,7 @@ Design-level decisions D1-D12 are in the design doc; planning decisions P1-P7 ar
 
 ## Next step
 
-Phase B plan Task 1 (studio assembly), then Tasks 2-13 in order; Task 2 is the only one that touches game code (`ImageResolver`, `CharacterDisplay`), so a mistake there shows in the game too: compile-check it before moving on.
+CHECKPOINT D (Zach): Test Runner EditMode Run All (expect only the 2 known old failures; report the `StudioPixelMatchTests` line), try the studio in the Editor (`Assets/Scenes/CharacterStudio.unity`, Play) and as the Linux build (`Builds/CharacterStudio/Linux/StarquillCharacters.x86_64`). After that: write B2's detailed tasks against B1's real code.
 
 ## Open flags
 
@@ -93,3 +96,7 @@ Phase B plan Task 1 (studio assembly), then Tasks 2-13 in order; Task 2 is the o
   - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K` (`TavernPresenter.RecruitLabel` drops the `g`: real UI bug).
 - Art problems for the artist, left untouched: 5 empty images (`ar02-0010-034`, one each in tr14, s04, w05, w06) and 36 whole-variant duplicates, including three `0000` drawings renumbered in Phase A Task 8 (`f02 0221` = `0055`, `f05 0067` = `0002`, `f06 0054` = `0002`). Full list: Tools > Art Tables > Check Images. The two `Artboard 1hd10-*` files still await the artist.
 - Player builds carry all art uncompressed (626 MB in a Linux build; the import setting is Uncompressed). This affects the Android game build too; outside Phase B. The studio uses LZ4HC (P6): record its build sizes at CHECKPOINT D.
+- Studio layout, seen in the Editor smoke capture (portrait Game view, 1080x1920): top-bar labels wrap ("Cou/nt", "Sca/le", "Tri" for Trim) and the dropdown arrows draw as plain white squares (`DefaultControls.Resources` has no sprites). Plan says layout polish waits for Zach's checkpoint feedback; not changed.
+- The builds include a `Starquill Characters_BurstDebugInformation_DoNotShip/` folder; leave it out of the B6 zip.
+- ExploreScene shows as unsaved after Coplay scripts that create objects in the open scene; checked twice, its content was byte-identical to the file (no real change).
+- `Library/CharacterStudio/studio-settings.json` exists from the Editor smoke run (repo root = this checkout); the smoke-run export PNGs were deleted.
