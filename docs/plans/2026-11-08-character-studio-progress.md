@@ -29,7 +29,8 @@ Done when (Phase A, this handoff):
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
 | Plan | done | `fde82549` |
 | **Phase A** | **done, CHECKPOINT C green** | 18 commits `1756e7fa`..`f88cb6c2` on `unity-idle-clicker`, not pushed |
-| Phase B plan | in progress | Windows Build Support (Mono) installed (Zach, 2026-11-08) |
+| Phase B plan | written: B1 in full (Tasks 1-13, CHECKPOINT D), B2-B6 outlined | `docs/plans/2026-11-08-character-studio-phase-b-plan.md`; Windows Build Support (Mono) installed (Zach, 2026-11-08) |
+| B1 Tasks 1-13 | not started | |
 | 1 CsvTable + test project | done | `dotnet test tools/ArtTablesTests`: Passed 7, Failed 0 (failing build first: `Starquill.Data` not found). Deviation: `.gitignore` also got `!tools/ArtTablesTests/ArtTablesTests.csproj`, because Unity's `*.csproj` rule ignored it |
 | 2 ArtFileName | done | `dotnet test tools/ArtTablesTests`: Passed 20, Failed 0 (7 + 13; failing build first: `ArtFileName` not found) |
 | 3 ArtTableData + ArtCells | done | `dotnet test tools/ArtTablesTests`: Passed 41, Failed 0 (failing build first: `ArtCells` not found) |
@@ -71,7 +72,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Write the Phase B detailed plan (superpowers:writing-plans) on top of Phase A's real APIs; outline at the end of the plan doc.
+Execute Phase B Stage B1 (Tasks 1-13) with superpowers:executing-plans, stopping at CHECKPOINT D. Planning decisions P1-P7 are in the Phase B plan.
 
 ## Open flags
 
@@ -83,3 +84,4 @@ Write the Phase B detailed plan (superpowers:writing-plans) on top of Phase A's 
 - The auto-rebake runs on the Editor's next update, which on this Linux box waits until the Editor window has focus. A scripted `AssetDatabase.Refresh` from Coplay queues it but does not run it; call `ArtTablesBaker.Bake()` directly when scripting.
 - The PC crashed during the Phase A session (Zach, 2026-11-08); likely why scratchpad helper files vanished around 14:45. No repo files were affected.
 - Species `x_scale`/`y_scale` are never drawn (found while planning Phase B, 2026-11-08). The Sprint 2 port (`71a03c52`, `862d5a45`, 2026-02-13) copied them into `SpeciesDisplayData`/`SpeciesInstanceData`; no renderer reads them. Godot applied them everywhere: `character_display.gd` scaled the whole doll about the bottom-center (feet), and the randomizer export grew the canvas to 200 × scale. 10 species are affected (fairy 0.4, gnome y 0.7, dwarf 1.1/0.8, divine elf y 1.1, naga/djinn 1.1, ogre/cyclops ogre 1.2, bridge troll 1.3, stone golem 1.4). Head crops are the defaults (0.35/0.5) for all of them, so nothing was tuned around the omission. Canvas fact: a human with a hat spans rows 0-~184 of 200, so scaling up about the feet clips the head in today's fixed 200 px canvas. Zach (2026-11-08): backlog item in `docs/roadmap.md`; he is taking the options to the artist (one he named: special rules for a few species, most differences reduced sharply). Scale stays disabled; Phase B proceeds without it, so the studio exports at size 1 like the game.
+- Player builds carry all art uncompressed: `resources.assets.resS` was 626 MB in the Task 15 Linux test build (4,098 sprites × 160 KB, import setting Uncompressed). This affects the Android game build too (separate from the studio); the studio plan uses LZ4HC build compression (P6) and measures at CHECKPOINT D.

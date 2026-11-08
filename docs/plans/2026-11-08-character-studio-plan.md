@@ -3237,6 +3237,8 @@ git commit -m "docs: art tables pipeline"
 
 ## Phase B outline: Character Studio app (detailed plan after Phase A merges)
 
+**Superseded 2026-11-08:** the detailed Phase B plan is `docs/plans/2026-11-08-character-studio-phase-b-plan.md` (Stage B1 in full, B2-B6 outlined).
+
 Prerequisite: Unity Hub > Installs > 6000.3.8f1 > Add modules > **Windows Build Support (Mono)**.
 
 1. `Starquill.Studio` assembly (`Assets/Scripts/Studio/`, refs Core, Data, Display, Equipment, Characters) + `Assets/Scenes/CharacterStudio.unity`, never in the game's scene list. Two build profiles (Windows Mono, Linux) with `CharacterStudio` as the only scene.
