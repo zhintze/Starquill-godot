@@ -12,7 +12,8 @@
         "Starquill.Destinations",
         "Starquill.Managers",
         "Starquill.Display",
-        "Starquill.UI"
+        "Starquill.UI",
+        "Starquill.Studio"
     ],
     "includePlatforms": [
         "Editor"

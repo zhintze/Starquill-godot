@@ -1,0 +1,19 @@
+{
+    "name": "Starquill.Studio",
+    "rootNamespace": "Starquill.Studio",
+    "references": [
+        "Starquill.Core",
+        "Starquill.Data",
+        "Starquill.Display",
+        "Starquill.Equipment",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor",
+        "LinuxStandalone64",
+        "WindowsStandalone64"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "autoReferenced": true
+}

@@ -29,6 +29,13 @@ namespace Starquill.Display
             ExcludeCompositingLayerFromAllCameras();
         }
 
+        /// size: render texture width and height in pixels (200 = the 1x canvas).
+        public void Initialize(ImageResolver resolver, int size)
+        {
+            textureSize = size;
+            Initialize(resolver);
+        }
+
         public void SetPieces(List<DisplayPiece> pieces)
         {
             if (compositingCamera == null || imageResolver == null) return;
