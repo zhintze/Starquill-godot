@@ -29,7 +29,9 @@ Done when (Stage B1, this handoff):
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
 | Phase A (Tasks 1-17) | done, checkpoints A, B, C green | 18 commits `1756e7fa`..`f88cb6c2`; Test Runner 554/556 (2 known old failures), results file 2026-11-08 14:50; `dotnet test tools/ArtTablesTests` 73 passed, RepoData 3 expected warnings |
 | Phase B plan | done | `08b23989` |
-| B1 1-13 | not started | |
+| B1 1-13 | in progress (rows below) | Editor opened by Zach 2026-11-08; Coplay connected |
+| B1 T1-2 asmdef, sprite source | done | `e2615d67`; compile clean; probe: `ImageResolver(ISpriteSource)`, `MissingPaths`, `CharacterDisplay.Initialize(ImageResolver,Int32)`, `ImageResolverTests` present |
+| B1 T3 PixelOps | done | compile clean; probe: `PixelOps` 5 methods, `PixelOpsTests` 5 tests; commit below (doc rides in the same commit) |
 
 ## Decision map
 
