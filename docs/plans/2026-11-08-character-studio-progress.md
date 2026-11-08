@@ -36,6 +36,9 @@ Done when (Stage B1, this handoff):
 | B1 T5 StudioData | done | `547bc9fd`; compile clean; smoke call: load 137 ms, 27 species, 49 armor types, 9 weapons, 3 issues, 0 errors |
 | B1 T6 StudioCharacter | done | `a4cc405b`; compile clean; probe: `StudioCharacter` (`ToDisplayList`, `SpeciesView`), `StudioItem`; 3 tests |
 | B1 T7 RandomSettings, StudioRoller | done | `d668cf35`; compile clean; smoke call: 300 rolls at chance 1, avg 10.0 items, 0 two-handed with off hand; 8 tests |
+| B1 T8 StudioRenderer, ExportNamer | done | `e340014d`; compile clean; smoke call (human, seed 42): 2x full export 400x400 RGBA with transparent corner, trimmed 271x358; 0 missing sprites; edge pixels dark from the art's own outlines (source art edge mean rgb 1,1,1), no fringe |
+| B1 T9 pixel match test | done | `f6075d3e`; compile clean; same check run as a smoke call: opaque 43246, differ(>2) 4 (0.00%), max diff 6. Zach's Test Runner run is the record |
+| B1 T10 StudioSettings | done | `5269cfc4`; compile clean; probe: `Load`, `Save`, `SnapScale`, `ResolvedExportFolder`; 3 tests (7 cases) |
 
 ## Decision map
 
