@@ -150,6 +150,8 @@ def write_csv(path: Path, header, rows, apply: bool):
 
 
 def cmd_csv(apply: bool):
+    if not (DATA / "equipment.json").exists():
+        sys.exit("The art JSON was deleted after migration; the CSVs in Assets/Data/ArtTables are the source now.")
     eq = json.loads((DATA / "equipment.json").read_text())
     wp = json.loads((DATA / "weapons.json").read_text())
     sp = json.loads((DATA / "species.json").read_text())
