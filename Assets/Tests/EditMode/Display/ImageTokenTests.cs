@@ -51,35 +51,35 @@ namespace Starquill.Tests.Display
         public void ToSpritePath_Static_ConstructsCorrectPath()
         {
             var token = ImageToken.Parse("0001-016");
-            Assert.AreEqual("Images/species/0001-016", token.ToSpeciesSpritePath());
+            Assert.AreEqual("Images/species/body/0001-016", token.ToSpeciesSpritePath());
         }
 
         [Test]
         public void ToSpritePath_ModularFull_ConstructsCorrectPath()
         {
             var token = ImageToken.Parse("f01-0043-084");
-            Assert.AreEqual("Images/species/f01-0043-084", token.ToSpeciesSpritePath());
+            Assert.AreEqual("Images/species/f01/f01-0043-084", token.ToSpeciesSpritePath());
         }
 
         [Test]
         public void ToEquipmentSpritePath_ConstructsCorrectPath()
         {
             string path = ImageToken.BuildEquipmentSpritePath("hd01", 32, 130);
-            Assert.AreEqual("Images/equipment/hd01-0032-130", path);
+            Assert.AreEqual("Images/equipment/hd01/hd01-0032-130", path);
         }
 
         [Test]
         public void ToWeaponSpritePath_ConstructsCorrectPath()
         {
             string path = ImageToken.BuildWeaponSpritePath("w01", 164, 1);
-            Assert.AreEqual("Images/weapons/w01-164-0001", path);
+            Assert.AreEqual("Images/weapons/w01/w01-164-0001", path);
         }
 
         [Test]
         public void BuildModularSpritePath_ConstructsCorrectPath()
         {
             string path = ImageToken.BuildModularSpeciesPath("h02", "0043", 92);
-            Assert.AreEqual("Images/species/h02-0043-092", path);
+            Assert.AreEqual("Images/species/h02/h02-0043-092", path);
         }
     }
 }

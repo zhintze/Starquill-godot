@@ -69,25 +69,25 @@ namespace Starquill.Display
         {
             return Kind switch
             {
-                ImageTokenKind.Static => $"Images/species/{ImageNum}-{Layer:D3}",
-                ImageTokenKind.ModularFull => $"Images/species/{GroupType}-{ImageNum}-{Layer:D3}",
+                ImageTokenKind.Static => $"Images/species/body/{ImageNum}-{Layer:D3}",
+                ImageTokenKind.ModularFull => $"Images/species/{GroupType}/{GroupType}-{ImageNum}-{Layer:D3}",
                 _ => null
             };
         }
 
         public static string BuildModularSpeciesPath(string groupType, string imageNum, int layer)
         {
-            return $"Images/species/{groupType}-{imageNum}-{layer:D3}";
+            return $"Images/species/{groupType}/{groupType}-{imageNum}-{layer:D3}";
         }
 
         public static string BuildEquipmentSpritePath(string itemType, int itemNum, int layer)
         {
-            return $"Images/equipment/{itemType}-{itemNum:D4}-{layer:D3}";
+            return $"Images/equipment/{itemType}/{itemType}-{itemNum:D4}-{layer:D3}";
         }
 
         public static string BuildWeaponSpritePath(string itemType, int layer, int variant)
         {
-            return $"Images/weapons/{itemType}-{layer}-{variant:D4}";
+            return $"Images/weapons/{itemType}/{itemType}-{layer}-{variant:D4}";
         }
     }
 }

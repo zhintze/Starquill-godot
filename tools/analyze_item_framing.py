@@ -69,8 +69,8 @@ def measure(path):
 
 def main():
     per_cat = defaultdict(list)
-    files = glob.glob(os.path.join(EQUIP_DIR, '*.png')) + \
-        glob.glob(os.path.join(WEAPON_DIR, '*.png'))
+    files = glob.glob(os.path.join(EQUIP_DIR, '*', '*.png')) + \
+        glob.glob(os.path.join(WEAPON_DIR, '*', '*.png'))
     for path in sorted(files):
         cat = category_of(path)
         if cat is None:

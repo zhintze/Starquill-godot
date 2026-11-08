@@ -36,7 +36,8 @@ Done when (Phase A, this handoff):
 | 6 Converter: species, skin variance | done | `dotnet test tools/ArtTablesTests`: Passed 71, Failed 0 (7 new tests failed first; `Species_FullPartToken_IsAccepted` passed before the code, it only asserts no errors) |
 | 7 ArtRepo | done | `dotnet test tools/ArtTablesTests`: Passed 72, Failed 0 (failing build first: `ArtRepo` not found) |
 | 8 `0000` cleanup | done | Dry run classification matched the plan (copies f04 h01-h04, empty s04, unique f01 f02 f03 f05 f06 s01-s03). Deviation: s01-s03 renumbered to `0003`, not the plan's `0004` (those groups hold 0000-0002 only; next free is 0003). PNGs 4108 -> 4098; `grep -c -- -0000-` = 0; git shows only species PNG + .meta deletes/renames |
-| 9-17 | not started | |
+| 9 Folder per type + paths | done; CHECKPOINT A green (Zach, 2026-11-08) | Move: 4098 PNGs before and after, 4098 `.meta`, 78 new folder `.meta`; only the 2 `Artboard` files at `find -maxdepth 2`. Coplay `check_compile_errors`: none. Test Runner: 550/552 passed; the 2 failures predate Phase A (see Open flags), Zach counted the checkpoint green without fixing them. Play-test: ExploreScene looks fine; Console has no `Sprite not found` |
+| 10-17 | not started | |
 
 ## Decision map
 
@@ -62,8 +63,11 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 9 (one folder per type + new image paths), then CHECKPOINT A.
+Plan Task 10 (generate the CSVs + RepoData smoke test).
 
 ## Open flags
 
 - Task 8: the plan expected s01-s03 `0000` to become `0004`; the script's next-free rule gave `0003`. The JSON count for s01-s03 is 3, so the game already asked for a missing `0003`; it now finds the renumbered drawing, which means those three drawings become visible in play before Task 14 (the plan said renumbered drawings stay hidden until then).
+- Two EditMode tests fail, both since 2026-07-02 and unrelated to Phase A; Zach said note them and do not fix now (2026-11-08). Expect 2 failures at checkpoints B and C:
+  - `ColorFamilyTests.Classify_KnownColors(0.82, 0.71, 0.55, Brown)` gets Pastel: the Pastel rule from `144845e1` catches this tan; the test case is stale (the same file lists `#C7A68B` tan as Pastel).
+  - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K`: `TavernPresenter.RecruitLabel` drops the `g` every other price label shows (real UI bug).
