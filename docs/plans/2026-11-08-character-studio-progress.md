@@ -28,6 +28,8 @@ Done when (Phase A, this handoff):
 |---|---|---|
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
 | Plan | done | `fde82549` |
+| **Phase A** | **done, CHECKPOINT C green** | 18 commits `1756e7fa`..`f88cb6c2` on `unity-idle-clicker`, not pushed |
+| Phase B plan | in progress | Windows Build Support (Mono) installed (Zach, 2026-11-08) |
 | 1 CsvTable + test project | done | `dotnet test tools/ArtTablesTests`: Passed 7, Failed 0 (failing build first: `Starquill.Data` not found). Deviation: `.gitignore` also got `!tools/ArtTablesTests/ArtTablesTests.csproj`, because Unity's `*.csproj` rule ignored it |
 | 2 ArtFileName | done | `dotnet test tools/ArtTablesTests`: Passed 20, Failed 0 (7 + 13; failing build first: `ArtFileName` not found) |
 | 3 ArtTableData + ArtCells | done | `dotnet test tools/ArtTablesTests`: Passed 41, Failed 0 (failing build first: `ArtCells` not found) |
@@ -44,7 +46,7 @@ Done when (Phase A, this handoff):
 | 14 Catalog + factory variant sets | done; CHECKPOINT B green (Zach, 2026-11-08) | Test Runner: 556 total, 554 passed, 2 failed (only the 2 known old ones). Play-test and existing save confirmed by Zach. Before that: Coplay `check_compile_errors`: none; probe confirms `EquipmentCatalog.Load` and `ArtFixtures.SixSlotCatalog`. `grep AmountPerLayer\|.Amount\|LoadEquipmentJson\|LoadWeaponsJson Assets`: nothing. `dotnet test`: 73 passed. Deviation: tests and code went in one pass, so there was no separate failing compile for this task. The three inline test catalogs matched the fixture exactly |
 | 15 Delete art JSON | done | Wider grep: only `tools/color_pools.py` still read `color_palettes.json` (Task 16). 5 JSON + `.meta` removed; `migrate_art_tables.py csv` now exits with the retired message. Linux build via Coplay: Succeeded in 49 s; Editor.log shows 171 `Art images` warnings, then `Art tables baked: ...; 0 error(s), 3 warning(s).`, then `BuildPlayer: start`. With `hd01` `layer_codes` = `abc`: build Failed in 6 s with `Art tables: Error: equipment.csv line 9 ...` and `BuildFailedException: Art tables have errors`. Cell restored (git clean), rebaked: 49 equipment, 0 errors |
 | 16 Python tools read CSVs | done | `color_pools.py --help` exits 0. Served page (curl, port 8799): 1027 swatches; old JSON `main` had 1027 unique, CSV `main` 1027 unique. Server stopped, overrides file untouched. README: palette path, `migrate_art_tables.py`, `ArtTablesTests` |
-| 17 Docs | done | `implemented-systems.md` §1, §4, §5, §6, §10; `CLAUDE.md` Paper Doll, Data Loading, Editor Tools, Known Gotchas; design doc status line. Grep for the old JSON names and `SpriteImportFixer` in those docs: none. Waiting on CHECKPOINT C |
+| 17 Docs | done | `implemented-systems.md` §1, §4, §5, §6, §10; `CLAUDE.md` Paper Doll, Data Loading, Editor Tools, Known Gotchas; design doc status line. Grep for the old JSON names and `SpriteImportFixer` in those docs: none. CHECKPOINT C green (Zach, 2026-11-08): Test Runner 554/556 (the 2 known failures, results file 14:50), play-test fine |
 
 ## Decision map
 
@@ -65,12 +67,11 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 - **Open threads:**
   - which `hd10-0001` / `hd10-0004` headband drawings are right (artist, design Open items)
   - whether `rungsglas` is the artist's GitHub login (design Open items)
-  - Windows Build Support (Mono) must be installed before Phase B (Zach)
   - save file protection is a separate backlog item (`docs/roadmap.md`)
 
 ## Next step
 
-CHECKPOINT C: Zach runs Test Runner > EditMode > Run All (expect 554/556, the 2 known failures) and one more play session, then decides on starting Phase B (needs Windows Build Support (Mono) installed first).
+Write the Phase B detailed plan (superpowers:writing-plans) on top of Phase A's real APIs; outline at the end of the plan doc.
 
 ## Open flags
 
@@ -80,3 +81,4 @@ CHECKPOINT C: Zach runs Test Runner > EditMode > Run All (expect 554/556, the 2 
   - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K`: `TavernPresenter.RecruitLabel` drops the `g` every other price label shows (real UI bug).
 - Check Images (Task 11): 5 empty images (`ar02-0010-034`, one each in tr14, s04, w05, w06) and 36 whole-variant duplicates (every layer identical), e.g. tr03 0107-0111 = 0007-0011, f02 0211-0220 = 0052-0061, h01 x5. Three of them are `0000` drawings renumbered in Task 8, which only compared `0000` with `0001`: f02 0221 = 0055, f05 0067 = 0002, f06 0054 = 0002. Art left untouched (artist decides). Full list: rerun Tools > Art Tables > Check Images.
 - The auto-rebake runs on the Editor's next update, which on this Linux box waits until the Editor window has focus. A scripted `AssetDatabase.Refresh` from Coplay queues it but does not run it; call `ArtTablesBaker.Bake()` directly when scripting.
+- The PC crashed during the Phase A session (Zach, 2026-11-08); likely why scratchpad helper files vanished around 14:45. No repo files were affected.
