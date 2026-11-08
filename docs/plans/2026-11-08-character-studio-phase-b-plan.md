@@ -19,13 +19,13 @@ Phase B is large, so it lands in stages, each ending at a checkpoint where Zach 
 | Stage | Delivers | Detail here |
 |---|---|---|
 | **B1 Foundation** | assembly, disk sprites, data load from a repo folder, character model + roller, render + PNG export, minimal Bulk screen (Count, Randomize All, Equip Random, Lock, reroll, Export), repo picker, Warnings list, scene + Linux/Windows builds | **full (Tasks 1-13, CHECKPOINT D)** |
-| B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin dropdowns, Settings window, checked-only export | outline |
+| B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **full (Tasks 14-23, CHECKPOINT E)**, written after CHECKPOINT D |
 | B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | outline |
 | B4 Presets | Character, Cast, Random settings JSON | outline |
 | B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | outline |
 | B6 Release | GitHub Release packaging, artist README | outline |
 
-B2-B6 get their detailed tasks after CHECKPOINT D, written against B1's real code.
+Each later stage gets its detailed tasks after the previous checkpoint, written against the real code: B2 (Tasks 14-23) was written after CHECKPOINT D.
 
 ## Decisions made while planning (2026-11-08)
 
@@ -2429,14 +2429,1996 @@ git commit -m "feat(studio): CharacterStudio scene and Linux/Windows build menu"
 
 ---
 
-## Stages B2-B6 (outline; detailed after CHECKPOINT D)
+## Stage B2: Bulk screen complete (Tasks 14-23, CHECKPOINT E)
 
-**B2 Bulk screen complete** (`docs/plans/2026-11-08-character-studio-design.md` §2 Bulk)
-- Species multi-select (toggle list popup); each Randomize rolls from the checked species (`StudioRoller.RollCharacter` already takes the list).
-- Search box: matches `hd01-0001`, a full file name, or a description word (catalog descriptions); results list; a pick becomes a **Forced items** chip applied to every character, replacing that slot, kept by Equip Random, ✕ removes it. Godot's rules: one natural-slot item per prefix, later ones of the same prefix go to Misc 1-4, max 5 per slot type (4 for misc); weapons to main hand / off hand; a two-handed forced weapon clears the off hand, with a warning. `StudioRoller` gains `MakeItem(itemType, itemNum, rng)`.
-- Card species dropdown (rerolls body for the new species, keeps unrestricted gear) and skin color dropdown (species skin palette swatches), **Edit** (opens Single, B3).
-- Settings window: sliders per slot chance (incl. main/off hand), facial hair/detail chance, weight per item type grouped by slot.
-- Checked-cards export (a checkbox per card; Export does checked, or all when none checked); export folder text field.
+Written 2026-11-08 after CHECKPOINT D, against B1's committed code (`e2615d67`..`74524558`). Design of record: `docs/plans/2026-11-08-character-studio-design.md` §2 Bulk screen.
+
+### Decisions made while planning B2 (2026-11-08)
+
+| # | Decision | Why |
+|---|---|---|
+| P8 | Forced weapons are allowed: one main hand, one off hand, shields (`w08`/`w09`) only in the off hand. A combination that cannot fit (two-handed plus anything in the off hand, a third weapon, a second shield) is refused with a message saying why. | The approved B2 outline. Godot blocked weapons from search altogether (`character_randomizer_control.gd:530-536`), which leaves the artist no way to show one sword across a cast. |
+| P9 | Forced items go on **unlocked** cards only: when added, after every roll, after a card's species change. Removing a chip takes the item off unlocked cards and leaves that slot empty until the next roll; other gear stays. | Godot rerolled every card's whole outfit on each add/remove (`:636-640`); keeping the rest of the outfit is less surprising. Lock means "leave this card alone" (design §2). |
+| P10 | When a forced off-hand item meets a randomly rolled two-handed main hand, the main hand is emptied; a forced two-handed main hand empties a random off hand. | A forced item always wins over a random one. |
+| P11 | Slot limits follow Godot (`:556-575`): the first forced item of a slot type takes its slot, later ones go to Misc 1-4; the four Misc slots are shared by every overflow and every forced `mc` item. So at most 5 per slot type and 4 `mc`, as in Godot, and never more than fits. | Jakob's Law: the artist's existing tool. |
+| P12 | Search matches an item token (`hd01-0001`, partial too), a full file name or pasted path (`hd01-0001-130.png`, `w01-164-0001.png`), or a word in the item description (`hat`). It lists at most 15 results and says "Showing 15 of N". | Design §2 Search; Godot capped results at 20 in a smaller list. |
+| P13 | Species selection is stored in `studio-settings.json` as **excluded** species, so a species added later (B5) starts checked. Random settings (chances, weights) stay in memory until B4 adds Random settings presets. | Exclusions need no migration when species are added; B4 owns preset files. |
+| P14 | The card **Edit** button arrives with the Single screen (B3). | Nothing to open yet. |
+| P15 | Export moves to a bottom bar with an **export folder** field (typed or pasted, P2) and a **Select** checkbox per card: Export writes the selected cards, or all when none is selected; the button says which ("Export selected (3)" / "Export all (8)"). | Design §2 Export "All or checked characters into a chosen folder"; Nielsen: visibility of system status. |
+| P16 | The CHECKPOINT D layout flags are fixed here: labels never wrap (auto width), toggle labels overflow instead of wrapping, and the dropdown arrow and check marks use small sprites drawn in code. | Seen in the CHECKPOINT D capture ("Cou/nt", "Sca/le", "Tri", white squares). |
+
+### Facts the executor needs (B2)
+
+- B1 code is as written in Tasks 1-13 except `StudioApp`'s renderer field is `studioRenderer` (public property `Renderer` unchanged).
+- Species `item_restrictions` are in `species.csv` column 23; stone golem cannot wear `hd01`-`hd13` and most `tr` types.
+- Armor types with second-color layers: `ar05 hd02 hd04 hd06 hd08`. Weapons `w01`-`w07` are modular; `w08`/`w09` (shields) are not; two-handed: `w04 w05 w07`.
+- Non-modular weapons store the same number list on every layer, so "numbers usable on every layer" (the intersection) works for both kinds.
+- `ColorManager.ResolveColorField` never returns an empty array (falls back to a default palette).
+- uGUI `DefaultControls.CreateSlider` builds `Background`, `Fill Area/Fill`, `Handle Slide Area/Handle`.
+- A nested `Canvas` with `overrideSorting = true` draws its children above later siblings of the parent canvas; the search results list needs it because the card grid is created after the top bar.
+- Coplay `execute_script` gives up after 60 s, but a build keeps running in the Editor; read the result line from `~/.config/unity3d/Editor.log`.
+- The CharacterStudio scene is opened with `EditorSceneManager.OpenScene`; if ExploreScene shows as unsaved after scripts, compare a `SaveScene(..., saveAsCopy: true)` copy with the file before discarding (B1 found it byte-identical twice).
+
+---
+
+## Task 14: UI helpers, B2 additions and layout fixes
+
+**Files:**
+- Modify (replace whole file): `Assets/Scripts/Studio/UI/StudioUi.cs`
+
+No tests (thin wrappers, checked by eye at CHECKPOINT E). Existing callers (`RepoPickerView`, `WarningsView`, `BulkScreen`) keep compiling: every B1 signature is unchanged; `Input` gains an optional `placeholder`.
+
+**Step 1: Replace `StudioUi.cs`**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using TMPro;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+
+namespace Starquill.Studio.UI
+{
+    /// Code-built uGUI for the studio: flat colors, desktop sizes
+    /// (1920x1080 reference). Wraps DefaultControls / TMP_DefaultControls;
+    /// the dropdown arrow and check mark are drawn in code (no sprite assets).
+    public static class StudioUi
+    {
+        public static readonly Color Background = new Color(0.13f, 0.13f, 0.15f);
+        public static readonly Color PanelColor = new Color(0.19f, 0.19f, 0.22f);
+        public static readonly Color ControlColor = new Color(0.30f, 0.30f, 0.35f);
+        public static readonly Color Accent = new Color(0.36f, 0.62f, 0.95f);
+        public static readonly Color ChipColor = new Color(0.25f, 0.43f, 0.66f);
+        public static readonly Color TextColor = new Color(0.92f, 0.92f, 0.94f);
+        public static readonly Color ErrorColor = new Color(0.95f, 0.40f, 0.40f);
+
+        private static Sprite arrow, dot;
+        private static Texture2D checker;
+
+        private static TMP_DefaultControls.Resources TmpRes() =>
+            new TMP_DefaultControls.Resources { dropdown = ArrowSprite(), checkmark = DotSprite() };
+
+        private static DefaultControls.Resources UiRes() =>
+            new DefaultControls.Resources { dropdown = ArrowSprite(), checkmark = DotSprite() };
+
+        /// Down-pointing triangle for dropdowns.
+        public static Sprite ArrowSprite()
+        {
+            if (arrow != null) return arrow;
+            return arrow = MakeSprite(32, (x, y) =>
+            {
+                if (y < 9 || y > 22) return false;
+                float halfWidth = (y - 9) * 12f / 13f;
+                return Mathf.Abs(x + 0.5f - 16f) <= halfWidth;
+            });
+        }
+
+        /// Filled circle for check marks.
+        public static Sprite DotSprite()
+        {
+            if (dot != null) return dot;
+            return dot = MakeSprite(32, (x, y) => (new Vector2(x + 0.5f, y + 0.5f) - new Vector2(16f, 16f)).sqrMagnitude <= 100f);
+        }
+
+        private static Sprite MakeSprite(int size, Func<int, int, bool> inside)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+                { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                    px[y * size + x] = new Color32(255, 255, 255, (byte)(inside(x, y) ? 255 : 0));
+            tex.SetPixels32(px);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        public static Canvas CreateCanvas(string name)
+        {
+            var go = new GameObject(name, typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var canvas = go.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = go.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.matchWidthOrHeight = 0.5f;
+            return canvas;
+        }
+
+        public static void EnsureEventSystem()
+        {
+            if (EventSystem.current != null) return;
+            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+        }
+
+        public static RectTransform Panel(Transform parent, string name, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = color;
+            return (RectTransform)go.transform;
+        }
+
+        public static void Stretch(RectTransform rt, float left = 0, float top = 0, float right = 0, float bottom = 0)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = new Vector2(left, bottom);
+            rt.offsetMax = new Vector2(-right, -top);
+        }
+
+        public static HorizontalLayoutGroup Row(Transform parent, string name, float height, float spacing = 8f)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            go.transform.SetParent(parent, false);
+            var row = go.GetComponent<HorizontalLayoutGroup>();
+            row.spacing = spacing;
+            row.childAlignment = TextAnchor.MiddleLeft;
+            row.childControlWidth = row.childControlHeight = true;
+            row.childForceExpandWidth = row.childForceExpandHeight = false;
+            Size(go, -1, height);
+            return row;
+        }
+
+        public static VerticalLayoutGroup Column(Transform parent, string name, float spacing = 6f)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(VerticalLayoutGroup));
+            go.transform.SetParent(parent, false);
+            var col = go.GetComponent<VerticalLayoutGroup>();
+            col.spacing = spacing;
+            col.childControlWidth = col.childControlHeight = true;
+            col.childForceExpandWidth = true;
+            col.childForceExpandHeight = false;
+            return col;
+        }
+
+        /// Takes the free width in a Row, pushing later items to the right.
+        public static void Spacer(Transform parent)
+        {
+            var go = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            go.GetComponent<LayoutElement>().flexibleWidth = 1;
+        }
+
+        public static LayoutElement Size(GameObject go, float width, float height)
+        {
+            var le = go.GetComponent<LayoutElement>() ?? go.AddComponent<LayoutElement>();
+            if (width >= 0) le.preferredWidth = width;
+            if (height >= 0) le.preferredHeight = height;
+            return le;
+        }
+
+        /// One line, never wrapped. width -1: as wide as the text.
+        public static TMP_Text Label(Transform parent, string text, float fontSize = 20f, float width = -1f)
+        {
+            var go = TMP_DefaultControls.CreateText(TmpRes());
+            go.transform.SetParent(parent, false);
+            var tmp = go.GetComponent<TMP_Text>();
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.color = TextColor;
+            tmp.alignment = TextAlignmentOptions.MidlineLeft;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            Size(go, width, fontSize + 12f);
+            return tmp;
+        }
+
+        public static Button Button(Transform parent, string label, Action onClick, float width = 150f)
+        {
+            var go = TMP_DefaultControls.CreateButton(TmpRes());
+            go.name = label;
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = ControlColor;
+            var text = go.GetComponentInChildren<TMP_Text>();
+            text.text = label;
+            text.fontSize = 20f;
+            text.color = TextColor;
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            var button = go.GetComponent<Button>();
+            button.onClick.AddListener(() => onClick());
+            Size(go, width, 40f);
+            return button;
+        }
+
+        public static TMP_Dropdown Dropdown(Transform parent, IList<string> options, int value, Action<int> onChanged, float width = 160f)
+        {
+            var go = TMP_DefaultControls.CreateDropdown(TmpRes());
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = ControlColor;
+            var dd = go.GetComponent<TMP_Dropdown>();
+            dd.ClearOptions();
+            dd.AddOptions(new List<string>(options));
+            dd.SetValueWithoutNotify(Mathf.Clamp(value, 0, options.Count - 1));
+            dd.captionText.color = TextColor;
+            dd.captionText.fontSize = 20f;
+            dd.itemText.fontSize = 20f;
+            dd.onValueChanged.AddListener(i => onChanged(i));
+            Size(go, width, 40f);
+            return dd;
+        }
+
+        public static Toggle Toggle(Transform parent, string label, bool value, Action<bool> onChanged, float width = 120f)
+        {
+            var go = DefaultControls.CreateToggle(UiRes());
+            go.transform.SetParent(parent, false);
+            var toggle = go.GetComponent<Toggle>();
+            toggle.SetIsOnWithoutNotify(value);
+            ((Image)toggle.targetGraphic).color = ControlColor;
+            toggle.graphic.color = Accent;
+            var text = go.GetComponentInChildren<Text>();
+            text.text = label;
+            text.color = TextColor;
+            text.fontSize = 18;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            toggle.onValueChanged.AddListener(v => onChanged(v));
+            Size(go, width, 30f);
+            return toggle;
+        }
+
+        public static TMP_InputField Input(Transform parent, string value, Action<string> onEndEdit, float width = 700f, string placeholder = null)
+        {
+            var go = TMP_DefaultControls.CreateInputField(TmpRes());
+            go.transform.SetParent(parent, false);
+            var input = go.GetComponent<TMP_InputField>();
+            input.text = value ?? "";
+            input.textComponent.fontSize = 20f;
+            if (placeholder != null && input.placeholder is TMP_Text hint)
+            {
+                hint.text = placeholder;
+                hint.fontSize = 18f;
+                hint.textWrappingMode = TextWrappingModes.NoWrap;
+            }
+            input.onEndEdit.AddListener(v => onEndEdit(v));
+            Size(go, width, 40f);
+            return input;
+        }
+
+        /// Row: name, slider, value. The value text follows the slider.
+        public static Slider Slider(Transform parent, string label, float min, float max, float value, Action<float> onChanged, string format = "0.00")
+        {
+            var row = Row(parent, "Slider " + label, 30f, 10f);
+            Label(row.transform, label, 18f, 330f);
+            var go = DefaultControls.CreateSlider(UiRes());
+            go.transform.SetParent(row.transform, false);
+            go.transform.Find("Background").GetComponent<Image>().color = ControlColor;
+            go.transform.Find("Fill Area/Fill").GetComponent<Image>().color = Accent;
+            go.transform.Find("Handle Slide Area/Handle").GetComponent<Image>().color = TextColor;
+            var slider = go.GetComponent<Slider>();
+            slider.minValue = min;
+            slider.maxValue = max;
+            slider.SetValueWithoutNotify(value);
+            Size(go, 300f, 20f);
+            var valueText = Label(row.transform, value.ToString(format), 18f, 60f);
+            slider.onValueChanged.AddListener(v => { valueText.text = v.ToString(format); onChanged(v); });
+            return slider;
+        }
+
+        /// Clickable color square.
+        public static Image Swatch(Transform parent, Color color, float size, Action onClick)
+        {
+            var go = new GameObject("Swatch", typeof(RectTransform), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var image = go.GetComponent<Image>();
+            image.color = color;
+            go.GetComponent<Button>().onClick.AddListener(() => onClick());
+            Size(go, size, size);
+            return image;
+        }
+
+        /// Modal window over the whole canvas: a dim backdrop (a click on it
+        /// closes), a centered panel with a title and Close, and a scrolling
+        /// list. Returns the list; close() removes the window.
+        public static RectTransform Popup(Transform canvasRoot, string title, Vector2 size, out Action close)
+        {
+            var root = new GameObject("Popup: " + title, typeof(RectTransform));
+            root.transform.SetParent(canvasRoot, false);
+            Stretch((RectTransform)root.transform);
+            Action doClose = () => { if (root != null) UnityEngine.Object.Destroy(root); };
+            close = doClose;
+
+            // The backdrop and the window are siblings, so clicks inside the
+            // window never reach the backdrop's Button.
+            var backdrop = Panel(root.transform, "Backdrop", new Color(0f, 0f, 0f, 0.55f));
+            Stretch(backdrop);
+            backdrop.gameObject.AddComponent<Button>().onClick.AddListener(() => doClose());
+
+            var window = Panel(root.transform, "Window", PanelColor);
+            window.anchorMin = window.anchorMax = new Vector2(0.5f, 0.5f);
+            window.sizeDelta = size;
+            var col = Column(window, "Column", 10f);
+            Stretch((RectTransform)col.transform, 20, 20, 20, 20);
+
+            var header = Row(col.transform, "Header", 44f);
+            Label(header.transform, title, 26f);
+            Spacer(header.transform);
+            Button(header.transform, "Close", () => doClose(), 120f);
+
+            var list = ScrollList(col.transform);
+            Size(list.parent.parent.gameObject, -1, size.y - 104f).flexibleHeight = 1;
+            return list;
+        }
+
+        /// Vertical scroll area whose content is a grid of fixed-size cells.
+        public static RectTransform ScrollGrid(Transform parent, Vector2 cell, float spacing)
+        {
+            var go = DefaultControls.CreateScrollView(UiRes());
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = Background;
+            var scroll = go.GetComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.scrollSensitivity = 40f;
+            var content = scroll.content;
+            var grid = content.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = cell;
+            grid.spacing = new Vector2(spacing, spacing);
+            grid.padding = new RectOffset(12, 12, 12, 12);
+            var fitter = content.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return content;
+        }
+
+        /// Vertical scroll list (Warnings, popups).
+        public static RectTransform ScrollList(Transform parent)
+        {
+            var go = DefaultControls.CreateScrollView(UiRes());
+            go.transform.SetParent(parent, false);
+            go.GetComponent<Image>().color = Background;
+            var scroll = go.GetComponent<ScrollRect>();
+            scroll.horizontal = false;
+            scroll.scrollSensitivity = 40f;
+            var content = scroll.content;
+            var col = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            col.padding = new RectOffset(10, 10, 10, 10);
+            col.spacing = 4f;
+            col.childControlWidth = col.childControlHeight = true;
+            col.childForceExpandHeight = false;
+            content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return content;
+        }
+
+        /// 2x2 light/dark gray tile; use with RawImage.uvRect to repeat it.
+        public static Texture2D Checkerboard()
+        {
+            if (checker != null) return checker;
+            checker = new Texture2D(2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Repeat };
+            var a = new Color32(200, 200, 200, 255);
+            var b = new Color32(150, 150, 150, 255);
+            checker.SetPixels32(new[] { a, b, b, a });
+            checker.Apply();
+            return checker;
+        }
+    }
+}
+```
+
+**Step 2: Compile** (Refresh + `check_compile_errors`: none). Probe `StudioUi` has `Popup`, `Slider`, `Swatch`, `Spacer`, `ArrowSprite`, `DotSprite`. Check the Console for new warnings in `Assets/Scripts/Studio` (B1 found CS0108 only that way).
+
+**Step 3: Commit**
+
+```bash
+git add Assets/Scripts/Studio/UI/StudioUi.cs
+git commit -m "feat(studio): popup, slider and swatch helpers; no-wrap labels; drawn dropdown arrow and check mark"
+```
+
+---
+
+## Task 15: Item search
+
+**Files:**
+- Create: `Assets/Scripts/Studio/ForcedItem.cs`
+- Create: `Assets/Scripts/Studio/ItemSearch.cs`
+- Create: `Assets/Tests/EditMode/Studio/ItemSearchTests.cs`
+
+**Step 1: Write the failing tests**
+
+```csharp
+using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using Starquill.Display;
+using Starquill.Studio;
+
+namespace Starquill.Tests.Studio
+{
+    public class ItemSearchTests
+    {
+        private static StudioData D => StudioTestRepo.Data;
+
+        [Test]
+        public void Token_FindsThatItemFirst()
+        {
+            int n = ItemSearch.NumbersFor(D, "hd01")[0];
+            string token = $"hd01-{n:D4}";
+
+            var r = ItemSearch.Find(D, token);
+
+            Assert.AreEqual(token, r.Items[0].Token);
+        }
+
+        [Test]
+        public void EquipmentFileName_OrPastedPath_FindsExactlyThatItem()
+        {
+            int n = ItemSearch.NumbersFor(D, "hd01")[0];
+            int layer = D.Catalog.GetEntry("hd01").LayerCodes[0];
+            string file = Path.GetFileName(ImageToken.BuildEquipmentSpritePath("hd01", n, layer)) + ".png";
+
+            foreach (var q in new[] { file, file.ToUpperInvariant(),
+                         @"C:\Users\artist\Starquill\Assets\Resources\Images\equipment\hd01\" + file })
+            {
+                var r = ItemSearch.Find(D, q);
+                Assert.AreEqual(1, r.Total, q);
+                Assert.AreEqual(new ForcedItem("hd01", n), r.Items[0], q);
+            }
+        }
+
+        [Test]
+        public void WeaponFileName_FindsTheWeapon()
+        {
+            var w = D.Catalog.GetWeapon("w01");
+            int n = ItemSearch.NumbersFor(D, "w01")[0];
+            string file = Path.GetFileName(ImageToken.BuildWeaponSpritePath("w01", w.LayerCodes[0], n)) + ".png";
+
+            var r = ItemSearch.Find(D, file);
+
+            Assert.AreEqual(1, r.Total, file);
+            Assert.AreEqual(new ForcedItem("w01", n), r.Items[0]);
+        }
+
+        [Test]
+        public void DescriptionWord_FindsEveryVariantOfThatType()
+        {
+            var r = ItemSearch.Find(D, "gloves", 1000);
+
+            Assert.AreEqual(ItemSearch.NumbersFor(D, "ar01").Length, r.Total);
+            Assert.IsTrue(r.Items.All(i => i.ItemType == "ar01"));
+        }
+
+        [Test]
+        public void ResultsStopAtMax_TotalCountsAll()
+        {
+            var r = ItemSearch.Find(D, "hd", 10);
+
+            Assert.AreEqual(10, r.Items.Count);
+            Assert.Greater(r.Total, 10);
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        [TestCase("zzzz-nothing")]
+        [TestCase("hd01-9999-130.png")]
+        public void NoMatch_IsEmpty(string q)
+        {
+            var r = ItemSearch.Find(D, q);
+
+            Assert.AreEqual(0, r.Total);
+            Assert.AreEqual(0, r.Items.Count);
+        }
+
+        [Test]
+        public void NumbersFor_ModularWeapon_EveryLayerHasTheImage()
+        {
+            var w = D.Catalog.WeaponEntries.First(e => e.Modular);
+            var nums = ItemSearch.NumbersFor(D, w.ItemType);
+
+            Assert.IsNotEmpty(nums);
+            foreach (int n in nums)
+                foreach (int layer in w.LayerCodes)
+                    Assert.IsTrue(File.Exists(DiskSpriteSource.FilePathFor(StudioTestRepo.Root,
+                        ImageToken.BuildWeaponSpritePath(w.ItemType, layer, n))), $"{w.ItemType} layer {layer} #{n}");
+        }
+
+        [Test]
+        public void NumbersFor_UnknownType_IsEmpty()
+        {
+            Assert.IsEmpty(ItemSearch.NumbersFor(D, "zz99"));
+        }
+    }
+}
+```
+
+**Step 2: Compile-check to see it fail** (`ItemSearch`, `ForcedItem` not found).
+
+**Step 3: Implement**
+
+`Assets/Scripts/Studio/ForcedItem.cs`:
+```csharp
+using System;
+
+namespace Starquill.Studio
+{
+    /// One item variant picked in search, e.g. hd01-0001.
+    public sealed class ForcedItem : IEquatable<ForcedItem>
+    {
+        public readonly string ItemType;
+        public readonly int ItemNum;
+
+        public ForcedItem(string itemType, int itemNum)
+        {
+            ItemType = itemType;
+            ItemNum = itemNum;
+        }
+
+        public string Token => $"{ItemType}-{ItemNum:D4}";
+        public bool IsWeapon => ItemType.StartsWith("w", StringComparison.Ordinal);
+        /// Slot code: hd, tr, ar, lg, fe, mc (weapons: w0).
+        public string Prefix => ItemType.Substring(0, 2);
+
+        /// True when the slot holds this exact variant.
+        public bool Matches(StudioItem item) => item != null && item.ItemType == ItemType && item.ItemNum == ItemNum;
+
+        public bool Equals(ForcedItem other) => other != null && other.ItemType == ItemType && other.ItemNum == ItemNum;
+        public override bool Equals(object obj) => Equals(obj as ForcedItem);
+        public override int GetHashCode() => (ItemType, ItemNum).GetHashCode();
+        public override string ToString() => Token;
+    }
+}
+```
+
+`Assets/Scripts/Studio/ItemSearch.cs`:
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace Starquill.Studio
+{
+    /// The Bulk screen's search box: an item token (hd01-0001, partial too),
+    /// a file name or pasted path, or a word from the item description.
+    /// Only variants whose every layer image exists are listed.
+    public static class ItemSearch
+    {
+        public sealed class Result
+        {
+            public readonly List<ForcedItem> Items = new List<ForcedItem>();
+            /// Matches before the max cut.
+            public int Total;
+        }
+
+        private static readonly Regex EquipmentFile = new Regex(@"^([a-z]{2}\d{2})-(\d{4})-\d{3}(\.png)?$");
+        private static readonly Regex WeaponFile = new Regex(@"^(w\d{2})-\d{1,3}-(\d{4})(\.png)?$");
+
+        /// Variant numbers that exist on every layer of the type, ascending;
+        /// empty for an unknown type.
+        public static int[] NumbersFor(StudioData d, string itemType)
+        {
+            var weapon = d.Catalog.GetWeapon(itemType);
+            if (weapon != null)
+            {
+                IEnumerable<int> common = weapon.VariantsPerLayer[0];
+                foreach (var layer in weapon.VariantsPerLayer.Skip(1)) common = common.Intersect(layer);
+                return common.OrderBy(n => n).ToArray();
+            }
+            var entry = d.Catalog.GetEntry(itemType);
+            return entry != null ? entry.Variants.OrderBy(n => n).ToArray() : Array.Empty<int>();
+        }
+
+        public static string Description(StudioData d, string itemType) =>
+            d.Catalog.GetEntry(itemType)?.Description ?? d.Catalog.GetWeapon(itemType)?.Description ?? "";
+
+        private static IEnumerable<string> AllTypes(StudioData d) =>
+            d.Catalog.AllEntries.Select(e => e.ItemType)
+                .Concat(d.Catalog.WeaponEntries.Select(w => w.ItemType))
+                .OrderBy(t => t, StringComparer.Ordinal);
+
+        public static Result Find(StudioData d, string query, int max = 15)
+        {
+            var r = new Result();
+            string q = (query ?? "").Trim().Trim('"').ToLowerInvariant();
+            int slash = Math.Max(q.LastIndexOf('/'), q.LastIndexOf('\\'));
+            if (slash >= 0) q = q.Substring(slash + 1); // a pasted path: keep the file name
+            if (q.Length == 0) return r;
+
+            var file = EquipmentFile.Match(q);
+            if (!file.Success) file = WeaponFile.Match(q);
+            if (file.Success)
+            {
+                string type = file.Groups[1].Value;
+                int num = int.Parse(file.Groups[2].Value);
+                if (NumbersFor(d, type).Contains(num))
+                {
+                    r.Items.Add(new ForcedItem(type, num));
+                    r.Total = 1;
+                }
+                return r;
+            }
+
+            foreach (var type in AllTypes(d))
+            {
+                bool descriptionHit = Description(d, type).ToLowerInvariant().Contains(q);
+                foreach (int n in NumbersFor(d, type))
+                {
+                    var item = new ForcedItem(type, n);
+                    if (!descriptionHit && !item.Token.Contains(q)) continue;
+                    r.Total++;
+                    if (r.Items.Count < max) r.Items.Add(item);
+                }
+            }
+            return r;
+        }
+    }
+}
+```
+
+**Step 4: Compile** (none; probe `ItemSearch.Find`, `ItemSearch.NumbersFor`, `ForcedItem`). Smoke call: `ItemSearch.Find(StudioData.Load(root), "hat").Total` is greater than 0 and `Find(..., "hd01-0001-130.png").Total` is 1 if `hd01` has variant 1 (print both).
+
+**Step 5: Commit**
+
+```bash
+git add Assets/Scripts/Studio/ForcedItem.cs* Assets/Scripts/Studio/ItemSearch.cs* Assets/Tests/EditMode/Studio/ItemSearchTests.cs*
+git commit -m "feat(studio): item search by token, file name or description word"
+```
+
+---
+
+## Task 16: Roller additions (exact item, species change, settings reset)
+
+**Files:**
+- Modify: `Assets/Scripts/Studio/StudioRoller.cs`
+- Modify: `Assets/Scripts/Studio/RandomSettings.cs`
+- Create: `Assets/Tests/EditMode/Studio/StudioRollerItemTests.cs`
+
+**Step 1: Write the failing tests**
+
+```csharp
+using System.Linq;
+using NUnit.Framework;
+using Starquill.Studio;
+
+namespace Starquill.Tests.Studio
+{
+    public class StudioRollerItemTests
+    {
+        private static StudioData D => StudioTestRepo.Data;
+
+        [Test]
+        public void MakeItem_Armor_UsesTheNumberAndRollsSecondColors()
+        {
+            var entry = D.Catalog.GetEntry("hd08"); // second-color layer 160
+            int n = ItemSearch.NumbersFor(D, "hd08").Last();
+
+            var item = new StudioRoller(D).MakeItem("hd08", n, new System.Random(1));
+
+            Assert.AreEqual("hd08", item.ItemType);
+            Assert.AreEqual(n, item.ItemNum);
+            Assert.IsNull(item.LayerVariants);
+            CollectionAssert.AreEquivalent(entry.LayerColorVariance, item.VarianceColors.Keys);
+        }
+
+        [Test]
+        public void MakeItem_ModularWeapon_EveryLayerUsesTheNumber()
+        {
+            var w = D.Catalog.WeaponEntries.First(e => e.Modular);
+            int n = ItemSearch.NumbersFor(D, w.ItemType)[0];
+
+            var item = new StudioRoller(D).MakeItem(w.ItemType, n, new System.Random(2));
+
+            Assert.AreEqual(n, item.ItemNum);
+            Assert.AreEqual(w.LayerCodes.Length, item.LayerVariants.Length);
+            Assert.IsTrue(item.LayerVariants.All(v => v == n));
+        }
+
+        [Test]
+        public void MakeItem_UnknownType_IsNull()
+        {
+            Assert.IsNull(new StudioRoller(D).MakeItem("zz99", 1, new System.Random(3)));
+        }
+
+        [Test]
+        public void ChangeSpecies_NewBody_KeepsWearableGear_DropsRestricted()
+        {
+            var s = new RandomSettings();
+            s.Head = s.Torso = s.Arms = s.Legs = s.Feet = s.MainHand = s.OffHand = s.MiscEach = 1f;
+            var roller = new StudioRoller(D);
+            var restricted = D.Registry.Species["stone golem"].ItemRestrictions ?? new string[0];
+            var rng = new System.Random(4);
+
+            for (int i = 0; i < 50; i++)
+            {
+                var c = roller.RollCharacter(new[] { "human" }, s, rng);
+                var keep = c.Gear.Where(kv => !restricted.Contains(kv.Value.ItemType)).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+                roller.ChangeSpecies(c, "stone golem", s, rng);
+
+                Assert.AreEqual("stone golem", c.SpeciesName);
+                Assert.AreEqual("stone golem", c.Body.SpeciesName);
+                CollectionAssert.AreEquivalent(keep, c.Gear);
+            }
+        }
+
+        [Test]
+        public void RandomSettings_Reset_RestoresDefaults()
+        {
+            var s = new RandomSettings { Head = 0f, MiscEach = 1f, FacialHair = 0f };
+            s.TypeWeights["hd01"] = 0f;
+
+            s.Reset();
+
+            var d = new RandomSettings();
+            Assert.AreEqual(d.Head, s.Head);
+            Assert.AreEqual(d.MiscEach, s.MiscEach);
+            Assert.AreEqual(d.FacialHair, s.FacialHair);
+            Assert.AreEqual(0, s.TypeWeights.Count);
+        }
+    }
+}
+```
+
+**Step 2: Compile-check to see it fail** (`MakeItem`, `ChangeSpecies`, `Reset` not found).
+
+**Step 3: Implement**
+
+In `StudioRoller.cs`:
+
+1. Add a helper after the constructor and use it in `RollGear` (replace the line that builds `restricted` from `data.Registry.Species[c.SpeciesName].ItemRestrictions`):
+```csharp
+        private HashSet<string> Restricted(string species) =>
+            new HashSet<string>(data.Registry.Species[species].ItemRestrictions ?? Array.Empty<string>());
+```
+`RollGear` then starts:
+```csharp
+            c.Gear.Clear();
+            var restricted = Restricted(c.SpeciesName);
+```
+
+2. Add after `RollGear`:
+```csharp
+        /// New species and a new body for it; gear the new species can wear stays.
+        public void ChangeSpecies(StudioCharacter c, string species, RandomSettings s, Random rng)
+        {
+            c.SpeciesName = species;
+            RollBody(c, s, rng);
+            var restricted = Restricted(species);
+            foreach (var slot in c.Gear.Keys.ToList())
+                if (restricted.Contains(c.Gear[slot].ItemType)) c.Gear.Remove(slot);
+        }
+
+        /// This exact variant with random colors; null for an unknown type.
+        /// A modular weapon uses the number on every layer.
+        public StudioItem MakeItem(string itemType, int itemNum, Random rng)
+        {
+            var weapon = data.Catalog.GetWeapon(itemType);
+            var entry = weapon == null ? data.Catalog.GetEntry(itemType) : null;
+            if (weapon == null && entry == null) return null;
+
+            var item = new StudioItem
+            {
+                ItemType = itemType,
+                ItemNum = itemNum,
+                BaseColor = data.Registry.Colors.GetRandomColor("main", rng)
+            };
+            if (weapon != null && weapon.Modular)
+                item.LayerVariants = weapon.LayerCodes.Select(_ => itemNum).ToArray();
+            AddVariance(item, weapon != null ? weapon.LayerColorVariance : entry.LayerColorVariance, rng);
+            return item;
+        }
+```
+
+3. Make the shield check shareable (ForcedItems uses it): change `private static bool IsShield` to `internal static bool IsShield`.
+
+In `RandomSettings.cs`, add after `ChanceFor`:
+```csharp
+        /// Back to the defaults above; every weight back to 1.
+        public void Reset()
+        {
+            var d = new RandomSettings();
+            Head = d.Head; Torso = d.Torso; Arms = d.Arms; Legs = d.Legs; Feet = d.Feet;
+            MainHand = d.MainHand; OffHand = d.OffHand; MiscEach = d.MiscEach;
+            FacialHair = d.FacialHair; FacialDetail = d.FacialDetail;
+            TypeWeights.Clear();
+        }
+```
+
+**Step 4: Compile** (none; probe `MakeItem`, `ChangeSpecies`, `Reset`). B1's `StudioRollerTests` must still compile unchanged.
+
+**Step 5: Commit**
+
+```bash
+git add Assets/Scripts/Studio/StudioRoller.cs Assets/Scripts/Studio/RandomSettings.cs Assets/Tests/EditMode/Studio/StudioRollerItemTests.cs*
+git commit -m "feat(studio): exact-variant items, species change that keeps wearable gear, settings reset"
+```
+
+---
+
+## Task 17: Forced items
+
+**Files:**
+- Create: `Assets/Scripts/Studio/ForcedItems.cs`
+- Create: `Assets/Tests/EditMode/Studio/ForcedItemsTests.cs`
+
+**Step 1: Write the failing tests**
+
+```csharp
+using System.Linq;
+using NUnit.Framework;
+using Starquill.Core;
+using Starquill.Studio;
+
+namespace Starquill.Tests.Studio
+{
+    public class ForcedItemsTests
+    {
+        private static StudioData D => StudioTestRepo.Data;
+        private static StudioRoller Roller => new StudioRoller(D);
+
+        private static ForcedItem First(string type) => new ForcedItem(type, ItemSearch.NumbersFor(D, type)[0]);
+
+        private static ForcedItem[] Several(string prefix, int count) =>
+            D.Catalog.GetByPrefix(prefix)
+                .SelectMany(e => ItemSearch.NumbersFor(D, e.ItemType).Select(n => new ForcedItem(e.ItemType, n)))
+                .Take(count).ToArray();
+
+        private static StudioCharacter Bare(string species = "human")
+        {
+            var s = new RandomSettings();
+            s.Head = s.Torso = s.Arms = s.Legs = s.Feet = s.MainHand = s.OffHand = s.MiscEach = 0f;
+            return Roller.RollCharacter(new[] { species }, s, new System.Random(1));
+        }
+
+        [Test]
+        public void Duplicate_IsRefused()
+        {
+            var f = new ForcedItems(D);
+            Assert.IsTrue(f.TryAdd(First("hd01"), out _));
+
+            Assert.IsFalse(f.TryAdd(First("hd01"), out var msg));
+            StringAssert.Contains("already", msg);
+        }
+
+        [Test]
+        public void NumberWithoutArt_IsRefused()
+        {
+            Assert.IsFalse(new ForcedItems(D).TryAdd(new ForcedItem("hd01", 9999), out var msg));
+            StringAssert.Contains("no art", msg);
+        }
+
+        [Test]
+        public void FiveOfOneSlotType_Fit_TheSixthIsRefused()
+        {
+            var f = new ForcedItems(D);
+            var hats = Several("hd", 6);
+            for (int i = 0; i < 5; i++) Assert.IsTrue(f.TryAdd(hats[i], out var m), m);
+
+            Assert.IsFalse(f.TryAdd(hats[5], out var msg));
+            StringAssert.Contains("Misc", msg);
+        }
+
+        [Test]
+        public void MiscSlotsAreSharedByOverflowAndMiscItems()
+        {
+            var f = new ForcedItems(D);
+            var hats = Several("hd", 2);
+            var misc = Several("mc", 4);
+            Assert.IsTrue(f.TryAdd(hats[0], out _));
+            Assert.IsTrue(f.TryAdd(hats[1], out _)); // takes Misc 1
+            for (int i = 0; i < 3; i++) Assert.IsTrue(f.TryAdd(misc[i], out _));
+
+            Assert.IsFalse(f.TryAdd(misc[3], out _));
+        }
+
+        [TestCase("w04", "w01")] // two-handed main, then a one-handed off hand
+        [TestCase("w01", "w04")] // two-handed cannot go in the off hand
+        [TestCase("w08", "w04")] // shield in the off hand, then two-handed
+        public void HandConflicts_AreRefused(string first, string second)
+        {
+            var f = new ForcedItems(D);
+            Assert.IsTrue(f.TryAdd(First(first), out _));
+
+            Assert.IsFalse(f.TryAdd(First(second), out var msg));
+            StringAssert.Contains("two-handed", msg);
+        }
+
+        [Test]
+        public void OneHandedAndShield_Fit_AThirdWeaponIsRefused()
+        {
+            var f = new ForcedItems(D);
+            Assert.IsTrue(f.TryAdd(First("w01"), out _));
+            Assert.IsTrue(f.TryAdd(First("w08"), out _));
+
+            Assert.IsFalse(f.TryAdd(First("w02"), out var msg));
+            StringAssert.Contains("Both hands", msg);
+        }
+
+        [Test]
+        public void Apply_FirstOfAPrefixTakesItsSlot_LaterOnesGoToMisc()
+        {
+            var f = new ForcedItems(D);
+            var hats = Several("hd", 2);
+            f.TryAdd(hats[0], out _);
+            f.TryAdd(hats[1], out _);
+            var c = Bare();
+
+            f.Apply(c, Roller, new System.Random(2));
+
+            Assert.IsTrue(hats[0].Matches(c.Gear[EquipmentSlot.Head]));
+            Assert.IsTrue(hats[1].Matches(c.Gear[EquipmentSlot.Misc1]));
+            Assert.AreEqual(2, c.Gear.Count);
+        }
+
+        [Test]
+        public void Apply_KeepsOtherGear_AndASecondApplyChangesNothing()
+        {
+            var f = new ForcedItems(D);
+            f.TryAdd(First("hd01"), out _);
+            var c = Bare();
+            var boots = Roller.MakeItem("fe01", ItemSearch.NumbersFor(D, "fe01")[0], new System.Random(3));
+            c.Gear[EquipmentSlot.Feet] = boots;
+
+            f.Apply(c, Roller, new System.Random(4));
+            var placed = c.Gear[EquipmentSlot.Head];
+            f.Apply(c, Roller, new System.Random(5));
+
+            Assert.AreSame(boots, c.Gear[EquipmentSlot.Feet]);
+            Assert.AreSame(placed, c.Gear[EquipmentSlot.Head], "the item and its colors stay");
+        }
+
+        [Test]
+        public void Apply_ForcedTwoHanded_EmptiesTheOffHand()
+        {
+            var f = new ForcedItems(D);
+            f.TryAdd(First("w04"), out _);
+            var c = Bare();
+            c.Gear[EquipmentSlot.OffHand] = Roller.MakeItem("w08", ItemSearch.NumbersFor(D, "w08")[0], new System.Random(6));
+
+            f.Apply(c, Roller, new System.Random(7));
+
+            Assert.AreEqual("w04", c.Gear[EquipmentSlot.MainHand].ItemType);
+            Assert.IsFalse(c.Gear.ContainsKey(EquipmentSlot.OffHand));
+        }
+
+        [Test]
+        public void Apply_ForcedShield_EmptiesARandomTwoHandedMainHand()
+        {
+            var f = new ForcedItems(D);
+            f.TryAdd(First("w08"), out _);
+            var c = Bare();
+            c.Gear[EquipmentSlot.MainHand] = Roller.MakeItem("w04", ItemSearch.NumbersFor(D, "w04")[0], new System.Random(8));
+
+            f.Apply(c, Roller, new System.Random(9));
+
+            Assert.AreEqual("w08", c.Gear[EquipmentSlot.OffHand].ItemType);
+            Assert.IsFalse(c.Gear.ContainsKey(EquipmentSlot.MainHand));
+        }
+
+        [Test]
+        public void Apply_SkipsItemsTheSpeciesCannotWear()
+        {
+            var f = new ForcedItems(D);
+            Assert.IsTrue(f.TryAdd(First("hd01"), out _)); // stone golem cannot wear hd01
+            var c = Bare("stone golem");
+
+            f.Apply(c, Roller, new System.Random(10));
+
+            Assert.IsFalse(c.Gear.Values.Any(i => i.ItemType == "hd01"));
+        }
+
+        [Test]
+        public void RemoveThenStripAndApply_MovesTheNextItemIntoTheSlot()
+        {
+            var f = new ForcedItems(D);
+            var hats = Several("hd", 2);
+            f.TryAdd(hats[0], out _);
+            f.TryAdd(hats[1], out _);
+            var c = Bare();
+            f.Apply(c, Roller, new System.Random(11));
+
+            var before = f.Items.ToList();
+            Assert.IsTrue(f.Remove(hats[0]));
+            ForcedItems.Strip(c, before);
+            f.Apply(c, Roller, new System.Random(12));
+
+            Assert.IsTrue(hats[1].Matches(c.Gear[EquipmentSlot.Head]));
+            Assert.AreEqual(1, c.Gear.Count);
+        }
+    }
+}
+```
+
+**Step 2: Compile-check to see it fail.**
+
+**Step 3: Implement**
+
+`Assets/Scripts/Studio/ForcedItems.cs`:
+```csharp
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Starquill.Core;
+
+namespace Starquill.Studio
+{
+    /// The Bulk screen's Forced items: variants put on every unlocked
+    /// character after each roll (P9-P11). The first item of a slot type
+    /// takes its slot, later ones go to Misc 1-4; weapons: one main hand,
+    /// one off hand, shields only in the off hand, two-handed leaves the
+    /// off hand empty.
+    public sealed class ForcedItems
+    {
+        private static readonly EquipmentSlot[] MiscSlots =
+            { EquipmentSlot.Misc1, EquipmentSlot.Misc2, EquipmentSlot.Misc3, EquipmentSlot.Misc4 };
+
+        private readonly StudioData data;
+        private readonly List<ForcedItem> items = new List<ForcedItem>();
+
+        public ForcedItems(StudioData data) { this.data = data; }
+
+        public IReadOnlyList<ForcedItem> Items => items;
+
+        /// False, with the reason, when the item cannot be added.
+        public bool TryAdd(ForcedItem item, out string message)
+        {
+            message = null;
+            if (items.Contains(item))
+            {
+                message = $"{item} is already forced.";
+                return false;
+            }
+            if (!ItemSearch.NumbersFor(data, item.ItemType).Contains(item.ItemNum))
+            {
+                message = $"{item} has no art (an image for one of its layers is missing).";
+                return false;
+            }
+
+            var next = new List<ForcedItem>(items) { item };
+            if (item.IsWeapon)
+            {
+                if (!PlanHands(next.Where(i => i.IsWeapon), out _, out _, out message)) return false;
+            }
+            else if (MiscNeeded(next) > MiscSlots.Length)
+            {
+                message = $"Misc 1-4 are full, so {item} has no slot. Remove a forced item first.";
+                return false;
+            }
+            items.Add(item);
+            return true;
+        }
+
+        public bool Remove(ForcedItem item) => items.Remove(item);
+
+        /// Puts every forced item the species can wear on c, replacing what
+        /// is in those slots. An item already in its slot stays as it is.
+        public void Apply(StudioCharacter c, StudioRoller roller, Random rng)
+        {
+            if (items.Count == 0) return;
+            var restricted = new HashSet<string>(data.Registry.Species[c.SpeciesName].ItemRestrictions ?? Array.Empty<string>());
+            var usable = items.Where(i => !restricted.Contains(i.ItemType)).ToList();
+            var taken = new HashSet<EquipmentSlot>();
+
+            PlanHands(usable.Where(i => i.IsWeapon), out var main, out var off, out _);
+            if (main != null) Put(c, EquipmentSlot.MainHand, main, taken, roller, rng);
+            if (off != null) Put(c, EquipmentSlot.OffHand, off, taken, roller, rng);
+
+            var prefixes = new HashSet<string>();
+            foreach (var item in usable.Where(i => !i.IsWeapon))
+            {
+                EquipmentSlot slot;
+                if (item.Prefix != "mc" && prefixes.Add(item.Prefix))
+                {
+                    slot = NaturalSlot(item.Prefix);
+                }
+                else
+                {
+                    int free = Array.FindIndex(MiscSlots, s => !taken.Contains(s));
+                    if (free < 0) continue;
+                    slot = MiscSlots[free];
+                }
+                Put(c, slot, item, taken, roller, rng);
+            }
+
+            if (c.Gear.TryGetValue(EquipmentSlot.MainHand, out var held) && IsTwoHanded(held.ItemType)
+                && c.Gear.ContainsKey(EquipmentSlot.OffHand))
+                c.Gear.Remove(taken.Contains(EquipmentSlot.OffHand) ? EquipmentSlot.MainHand : EquipmentSlot.OffHand);
+        }
+
+        /// Empties every slot of c that holds one of these items.
+        public static void Strip(StudioCharacter c, IEnumerable<ForcedItem> list)
+        {
+            var set = list.ToList();
+            foreach (var slot in c.Gear.Keys.ToList())
+                if (set.Any(i => i.Matches(c.Gear[slot]))) c.Gear.Remove(slot);
+        }
+
+        private static void Put(StudioCharacter c, EquipmentSlot slot, ForcedItem item, HashSet<EquipmentSlot> taken,
+            StudioRoller roller, Random rng)
+        {
+            taken.Add(slot);
+            if (c.Gear.TryGetValue(slot, out var current) && item.Matches(current)) return;
+            c.Gear[slot] = roller.MakeItem(item.ItemType, item.ItemNum, rng);
+        }
+
+        private bool PlanHands(IEnumerable<ForcedItem> weapons, out ForcedItem main, out ForcedItem off, out string problem)
+        {
+            main = off = null;
+            problem = null;
+            foreach (var w in weapons)
+            {
+                if (StudioRoller.IsShield(w.ItemType))
+                {
+                    if (off != null) { problem = $"The off hand already holds {off}."; return false; }
+                    off = w;
+                }
+                else if (main == null)
+                {
+                    main = w;
+                }
+                else if (off != null)
+                {
+                    problem = "Both hands are already forced. Remove a weapon first.";
+                    return false;
+                }
+                else if (IsTwoHanded(w.ItemType))
+                {
+                    problem = $"{w} is two-handed and can only go in the main hand, which holds {main}.";
+                    return false;
+                }
+                else
+                {
+                    off = w;
+                }
+            }
+            if (main != null && off != null && IsTwoHanded(main.ItemType))
+            {
+                problem = $"{main} is two-handed, so the off hand cannot hold {off}.";
+                return false;
+            }
+            return true;
+        }
+
+        private bool IsTwoHanded(string itemType) => data.Catalog.GetWeapon(itemType)?.HandType == "two_handed";
+
+        /// Misc slots the armor list needs: every item after the first of its
+        /// slot type, plus every mc item.
+        private static int MiscNeeded(IEnumerable<ForcedItem> list) =>
+            list.Where(i => !i.IsWeapon).GroupBy(i => i.Prefix).Sum(g => g.Key == "mc" ? g.Count() : g.Count() - 1);
+
+        private static EquipmentSlot NaturalSlot(string prefix)
+        {
+            switch (prefix)
+            {
+                case "hd": return EquipmentSlot.Head;
+                case "tr": return EquipmentSlot.Torso;
+                case "ar": return EquipmentSlot.Arms;
+                case "lg": return EquipmentSlot.Legs;
+                case "fe": return EquipmentSlot.Feet;
+                default: return EquipmentSlot.Misc1;
+            }
+        }
+    }
+}
+```
+
+**Step 4: Compile** (none; probe `ForcedItems` with `TryAdd`, `Remove`, `Apply`, `Strip`, `Items`). Smoke call: add `hd01-<first>` and `w04-<first>`, apply to 100 rolled characters at chance 1, count characters that end with two-handed main plus off hand (expect 0).
+
+**Step 5: Commit**
+
+```bash
+git add Assets/Scripts/Studio/ForcedItems.cs* Assets/Tests/EditMode/Studio/ForcedItemsTests.cs*
+git commit -m "feat(studio): forced items with Godot slot limits and hand rules"
+```
+
+---
+
+## Task 18: Settings: excluded species and default export folder
+
+**Files:**
+- Modify: `Assets/Scripts/Studio/StudioSettings.cs`
+- Modify: `Assets/Tests/EditMode/Studio/StudioSettingsTests.cs`
+
+**Step 1: Write the failing tests** (add to `StudioSettingsTests`)
+
+```csharp
+        [Test]
+        public void ExcludedSpecies_DefaultsEmpty_AndRoundTrips()
+        {
+            Assert.IsEmpty(new StudioSettings().excludedSpecies);
+            string path = Path.Combine(Path.GetTempPath(), "studio_" + Path.GetRandomFileName(), "studio-settings.json");
+            try
+            {
+                var s = new StudioSettings();
+                s.excludedSpecies.Add("naga");
+                s.Save(path);
+                CollectionAssert.AreEqual(new[] { "naga" }, StudioSettings.Load(path).excludedSpecies);
+            }
+            finally { Directory.Delete(Path.GetDirectoryName(path), true); }
+        }
+
+        [Test]
+        public void Load_B1FileWithoutExcludedSpecies_GivesAnEmptyList()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "b1_" + Path.GetRandomFileName() + ".json");
+            File.WriteAllText(path, "{ \"repoRoot\": \"/r\", \"count\": 16 }");
+            try
+            {
+                var s = StudioSettings.Load(path);
+                Assert.AreEqual(16, s.count);
+                Assert.IsNotNull(s.excludedSpecies);
+                Assert.IsEmpty(s.excludedSpecies);
+            }
+            finally { File.Delete(path); }
+        }
+
+        [Test]
+        public void ResolvedExportFolder_EmptyMeansDefault()
+        {
+            Assert.AreEqual(StudioSettings.DefaultExportFolder, new StudioSettings().ResolvedExportFolder);
+            Assert.AreEqual("/x", new StudioSettings { exportFolder = "/x" }.ResolvedExportFolder);
+        }
+```
+
+**Step 2: Compile-check to see it fail.**
+
+**Step 3: Implement** in `StudioSettings.cs`:
+
+- Add `using System.Collections.Generic;`.
+- Add the field after `count`:
+```csharp
+        /// Species left out of random rolls (unchecked in the Species window).
+        /// Stored as exclusions so species added later start checked (P13).
+        public List<string> excludedSpecies = new List<string>();
+```
+- Replace `ResolvedExportFolder` with:
+```csharp
+        public static string DefaultExportFolder => Path.Combine(AppFolder, "exports");
+
+        public string ResolvedExportFolder =>
+            string.IsNullOrWhiteSpace(exportFolder) ? DefaultExportFolder : exportFolder;
+```
+- In `Load`, replace the `return JsonUtility.FromJson...` line with:
+```csharp
+                {
+                    var s = JsonUtility.FromJson<StudioSettings>(File.ReadAllText(path)) ?? new StudioSettings();
+                    s.excludedSpecies ??= new List<string>();
+                    return s;
+                }
+```
+(the `if (File.Exists(path))` now guards that block).
+
+**Step 4: Compile** (none; probe `excludedSpecies`, `DefaultExportFolder`).
+
+**Step 5: Commit**
+
+```bash
+git add Assets/Scripts/Studio/StudioSettings.cs Assets/Tests/EditMode/Studio/StudioSettingsTests.cs
+git commit -m "feat(studio): remember unchecked species; default export folder"
+```
+
+---
+
+## Task 19: Species window
+
+**Files:**
+- Create: `Assets/Scripts/Studio/UI/SpeciesPickerView.cs`
+
+No unit tests (wiring; checked at CHECKPOINT E).
+
+**Step 1: Implement**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Starquill.Studio.UI
+{
+    /// Popup with a checkbox per species. Unchecked names go into
+    /// excluded (StudioSettings.excludedSpecies); onChanged saves.
+    public sealed class SpeciesPickerView
+    {
+        public SpeciesPickerView(Transform canvasRoot, IReadOnlyList<string> names, List<string> excluded, Action onChanged)
+        {
+            var list = StudioUi.Popup(canvasRoot, "Species", new Vector2(560, 860), out _);
+            var toggles = new List<Toggle>();
+
+            var buttons = StudioUi.Row(list, "AllNone", 44f);
+            StudioUi.Button(buttons.transform, "All", () => SetAll(true), 120f);
+            StudioUi.Button(buttons.transform, "None", () => SetAll(false), 120f);
+            StudioUi.Label(list, "New and rerolled characters pick from the checked species.", 17f);
+
+            foreach (var name in names)
+            {
+                string n = name;
+                toggles.Add(StudioUi.Toggle(list, n, !excluded.Contains(n), on =>
+                {
+                    if (on) excluded.Remove(n);
+                    else if (!excluded.Contains(n)) excluded.Add(n);
+                    onChanged();
+                }, 400f));
+            }
+
+            void SetAll(bool on)
+            {
+                excluded.Clear();
+                if (!on) excluded.AddRange(names);
+                foreach (var t in toggles) t.SetIsOnWithoutNotify(on);
+                onChanged();
+            }
+        }
+    }
+}
+```
+
+**Step 2: Compile** (none; probe the type).
+
+**Step 3: Commit**
+
+```bash
+git add Assets/Scripts/Studio/UI/SpeciesPickerView.cs*
+git commit -m "feat(studio): species window (check which species random characters use)"
+```
+
+---
+
+## Task 20: Random settings window
+
+**Files:**
+- Create: `Assets/Scripts/Studio/UI/SettingsWindow.cs`
+
+**Step 1: Implement**
+
+```csharp
+using System;
+using UnityEngine;
+
+namespace Starquill.Studio.UI
+{
+    /// Popup with the RandomSettings sliders: chance per slot, facial
+    /// chances, weight per item type grouped by slot. Edits the Bulk
+    /// screen's settings object directly; the next roll uses them.
+    public sealed class SettingsWindow
+    {
+        private static readonly (string prefix, string title)[] Groups =
+        {
+            ("hd", "Head"), ("tr", "Torso"), ("ar", "Arms"), ("lg", "Legs"), ("fe", "Feet"), ("mc", "Misc")
+        };
+
+        public SettingsWindow(Transform canvasRoot, StudioData data, RandomSettings s)
+        {
+            var list = StudioUi.Popup(canvasRoot, "Random settings", new Vector2(820, 920), out var close);
+
+            var top = StudioUi.Row(list, "Top", 44f);
+            StudioUi.Button(top.transform, "Reset to defaults", () =>
+            {
+                s.Reset();
+                close();
+                new SettingsWindow(canvasRoot, data, s);
+            }, 230f);
+            StudioUi.Label(top.transform, "Changes apply to the next Randomize All, Equip Random or Reroll.", 17f);
+
+            Header(list, "Chance per slot (0 = never, 1 = always)");
+            Chance(list, "Head", s.Head, v => s.Head = v);
+            Chance(list, "Torso", s.Torso, v => s.Torso = v);
+            Chance(list, "Arms", s.Arms, v => s.Arms = v);
+            Chance(list, "Legs", s.Legs, v => s.Legs = v);
+            Chance(list, "Feet", s.Feet, v => s.Feet = v);
+            Chance(list, "Main hand", s.MainHand, v => s.MainHand = v);
+            Chance(list, "Off hand", s.OffHand, v => s.OffHand = v);
+            Note(list, "Off hand rolls only when the main hand is empty or one-handed.");
+            Chance(list, "Misc, each of 1-4", s.MiscEach, v => s.MiscEach = v);
+
+            Header(list, "Face");
+            Chance(list, "Facial hair", s.FacialHair, v => s.FacialHair = v);
+            Chance(list, "Facial detail", s.FacialDetail, v => s.FacialDetail = v);
+
+            Header(list, "Weight per item type within its slot (0 = never, 1 = normal)");
+            foreach (var (prefix, title) in Groups)
+            {
+                Note(list, title);
+                foreach (var e in data.Catalog.GetByPrefix(prefix)) Weight(list, e.ItemType, e.Description, s);
+            }
+            Note(list, "Weapons");
+            foreach (var w in data.Catalog.WeaponEntries) Weight(list, w.ItemType, w.Description, s);
+        }
+
+        private static void Header(Transform list, string text) => StudioUi.Label(list, text, 22f).color = StudioUi.Accent;
+
+        private static void Note(Transform list, string text) => StudioUi.Label(list, text, 17f);
+
+        private static void Chance(Transform list, string label, float value, Action<float> set) =>
+            StudioUi.Slider(list, label, 0f, 1f, value, set, "0.00");
+
+        private static void Weight(Transform list, string itemType, string description, RandomSettings s) =>
+            StudioUi.Slider(list, $"{itemType}  {description}", 0f, 3f, s.WeightOf(itemType), v => s.TypeWeights[itemType] = v, "0.0");
+    }
+}
+```
+
+**Step 2: Compile** (none; probe the type).
+
+**Step 3: Commit**
+
+```bash
+git add Assets/Scripts/Studio/UI/SettingsWindow.cs*
+git commit -m "feat(studio): random settings window (slot chances, facial chances, item type weights)"
+```
+
+---
+
+## Task 21: Skin color picker
+
+**Files:**
+- Create: `Assets/Scripts/Studio/UI/SwatchPicker.cs`
+
+**Step 1: Implement**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Starquill.Studio.UI
+{
+    /// Popup of color squares, 8 per row; a click picks and closes.
+    public sealed class SwatchPicker
+    {
+        public SwatchPicker(Transform canvasRoot, string title, IReadOnlyList<Color> colors, Action<Color> onPick)
+        {
+            var list = StudioUi.Popup(canvasRoot, title, new Vector2(600, 460), out var close);
+            HorizontalLayoutGroup row = null;
+            for (int i = 0; i < colors.Count; i++)
+            {
+                if (i % 8 == 0) row = StudioUi.Row(list, "Swatches", 54f, 8f);
+                var color = colors[i];
+                StudioUi.Swatch(row.transform, color, 54f, () => { onPick(color); close(); });
+            }
+        }
+    }
+}
+```
+
+**Step 2: Compile** (none; probe the type).
+
+**Step 3: Commit**
+
+```bash
+git add Assets/Scripts/Studio/UI/SwatchPicker.cs*
+git commit -m "feat(studio): color swatch picker popup"
+```
+
+---
+
+## Task 22: Bulk screen complete
+
+**Files:**
+- Modify (replace whole file): `Assets/Scripts/Studio/UI/BulkScreen.cs`
+
+No unit tests (logic is in Tasks 15-18). Checked by the executor's Editor smoke run (Task 23) and at CHECKPOINT E.
+
+**Step 1: Replace `BulkScreen.cs`**
+
+```csharp
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Starquill.Display;
+using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
+
+namespace Starquill.Studio.UI
+{
+    /// The grid of random characters (ported from the Godot randomizer).
+    /// Top: Count, Species, Randomize All, Equip Random, Settings, then the
+    /// search box and Forced items chips. Bottom: export. Each card: species,
+    /// skin color, Select, Lock, Reroll.
+    public sealed class BulkScreen
+    {
+        private const int MaxResults = 15;
+        private const string NoSpecies = "No species is checked. Use the Species button to check at least one.";
+
+        private sealed class Card
+        {
+            public GameObject Root;
+            public CharacterDisplay Display;
+            public RawImage Image;
+            public TMP_Dropdown Species;
+            public Button SkinButton;
+            public Image Skin;
+            public Toggle Lock;
+            public bool Selected;
+        }
+
+        private readonly StudioApp app;
+        private readonly Transform canvas;
+        private readonly StudioRoller roller;
+        private readonly ForcedItems forced;
+        private readonly RandomSettings random = new RandomSettings();
+        private readonly System.Random rng = new System.Random(Environment.TickCount);
+        private readonly List<StudioCharacter> characters = new List<StudioCharacter>();
+        private readonly List<Card> cards = new List<Card>();
+        private readonly Dictionary<ForcedItem, GameObject> chips = new Dictionary<ForcedItem, GameObject>();
+        private readonly RectTransform grid;
+        private readonly Transform forceRow;
+        private readonly TMP_Text noChips;
+        private readonly TMP_InputField search;
+        private readonly RectTransform results;
+        private readonly TMP_Text status;
+        private readonly Button warnings, speciesButton, exportButton;
+
+        private StudioData Data => app.Data;
+        private StudioSettings S => app.Settings;
+
+        public BulkScreen(Transform parent, StudioApp app)
+        {
+            this.app = app;
+            canvas = parent;
+            roller = new StudioRoller(app.Data);
+            forced = new ForcedItems(app.Data);
+
+            var root = StudioUi.Panel(parent, "Bulk", StudioUi.Background);
+            StudioUi.Stretch(root);
+
+            var top = StudioUi.Column(root, "TopBars", 8f);
+            Dock((RectTransform)top.transform, true, 104f);
+
+            var make = StudioUi.Row(top.transform, "Make", 48f);
+            StudioUi.Label(make.transform, "Count", 20f);
+            StudioUi.Dropdown(make.transform, StudioSettings.Counts.Select(c => c.ToString()).ToList(),
+                Array.IndexOf(StudioSettings.Counts, S.count),
+                i => { S.count = StudioSettings.Counts[i]; app.SaveSettings(); SetCount(S.count); }, 90f);
+            speciesButton = StudioUi.Button(make.transform, "Species", OpenSpecies, 190f);
+            StudioUi.Button(make.transform, "Randomize All", RandomizeAll, 170f);
+            StudioUi.Button(make.transform, "Equip Random", EquipRandom, 170f);
+            StudioUi.Button(make.transform, "Settings", OpenSettings, 130f);
+            StudioUi.Spacer(make.transform);
+            warnings = StudioUi.Button(make.transform, "Warnings", () => new WarningsView(canvas, app), 170f);
+            StudioUi.Button(make.transform, "Repo folder", app.ShowRepoPicker, 150f);
+
+            forceRow = StudioUi.Row(top.transform, "Force", 48f).transform;
+            search = StudioUi.Input(forceRow, "", _ => { }, 420f, "Search: hd01-0001, a file name, or a word like hat");
+            search.onValueChanged.AddListener(ShowResults);
+            results = CreateResultsPanel(search.transform);
+            StudioUi.Label(forceRow, "Forced items:", 20f);
+            noChips = StudioUi.Label(forceRow, "none", 18f);
+
+            var bottom = StudioUi.Column(root, "BottomBar", 4f);
+            Dock((RectTransform)bottom.transform, false, 84f);
+            var export = StudioUi.Row(bottom.transform, "Export", 48f);
+            StudioUi.Label(export.transform, "Scale", 20f);
+            StudioUi.Dropdown(export.transform, StudioSettings.Scales.Select(x => x + "x").ToList(),
+                Array.IndexOf(StudioSettings.Scales, StudioSettings.SnapScale(S.exportScale)),
+                i => { S.exportScale = StudioSettings.Scales[i]; app.SaveSettings(); }, 80f);
+            StudioUi.Toggle(export.transform, "Trim", S.trim, v => { S.trim = v; app.SaveSettings(); }, 90f);
+            StudioUi.Label(export.transform, "Folder", 20f);
+            StudioUi.Input(export.transform, S.exportFolder, SetExportFolder, 640f, "Default: " + StudioSettings.DefaultExportFolder);
+            StudioUi.Button(export.transform, "Open folder", OpenExportFolder, 150f);
+            exportButton = StudioUi.Button(export.transform, "Export", Export, 220f);
+            status = StudioUi.Label(bottom.transform, "", 18f);
+
+            grid = StudioUi.ScrollGrid(root, new Vector2(220, 340), 12f);
+            StudioUi.Stretch((RectTransform)grid.parent.parent, 0, 120, 0, 96); // the ScrollView
+
+            SetCount(S.count);
+            UpdateSpeciesButton();
+            UpdateWarningsButton();
+            UpdateExportButton();
+        }
+
+        private static void Dock(RectTransform rt, bool top, float height)
+        {
+            rt.anchorMin = new Vector2(0, top ? 1 : 0);
+            rt.anchorMax = new Vector2(1, top ? 1 : 0);
+            rt.pivot = new Vector2(0.5f, top ? 1 : 0);
+            rt.sizeDelta = new Vector2(-24, height);
+            rt.anchoredPosition = new Vector2(0, top ? -8 : 6);
+        }
+
+        // ---- characters ----
+
+        private List<string> ChosenSpecies() => Data.SpeciesNames.Where(n => !S.excludedSpecies.Contains(n)).ToList();
+
+        private StudioCharacter NewCharacter(IReadOnlyList<string> species)
+        {
+            var c = roller.RollCharacter(species, random, rng);
+            forced.Apply(c, roller, rng);
+            return c;
+        }
+
+        private void SetCount(int count)
+        {
+            var species = ChosenSpecies();
+            while (characters.Count < count)
+            {
+                if (species.Count == 0) { ShowStatus(NoSpecies, true); break; }
+                characters.Add(NewCharacter(species));
+                cards.Add(CreateCard(cards.Count));
+                Redraw(cards.Count - 1);
+            }
+            while (characters.Count > count)
+            {
+                int last = characters.Count - 1;
+                UnityEngine.Object.Destroy(cards[last].Root);
+                UnityEngine.Object.Destroy(cards[last].Display.gameObject);
+                cards.RemoveAt(last);
+                characters.RemoveAt(last);
+            }
+            UpdateExportButton();
+        }
+
+        private Card CreateCard(int index)
+        {
+            var card = new Card();
+            var panel = StudioUi.Panel(grid, $"Card{index + 1}", StudioUi.PanelColor);
+            card.Root = panel.gameObject;
+            var col = StudioUi.Column(panel, "Column", 4f);
+            StudioUi.Stretch((RectTransform)col.transform, 6, 6, 6, 6);
+
+            var checker = new GameObject("Checker", typeof(RectTransform), typeof(RawImage));
+            checker.transform.SetParent(col.transform, false);
+            var checkerImage = checker.GetComponent<RawImage>();
+            checkerImage.texture = StudioUi.Checkerboard();
+            checkerImage.uvRect = new Rect(0, 0, 13, 13);
+            StudioUi.Size(checker, 208, 208);
+
+            var doll = new GameObject("Character", typeof(RectTransform), typeof(RawImage));
+            doll.transform.SetParent(checker.transform, false);
+            StudioUi.Stretch((RectTransform)doll.transform);
+            card.Image = doll.GetComponent<RawImage>();
+            card.Display = app.Renderer.CreatePreview();
+            card.Image.texture = card.Display.Texture;
+
+            card.Species = StudioUi.Dropdown(col.transform, Data.SpeciesNames, 0, v => ChangeSpecies(index, v), -1f);
+            StudioUi.Size(card.Species.gameObject, -1, 34f);
+
+            var body = StudioUi.Row(col.transform, "Body", 34f, 6f);
+            card.SkinButton = StudioUi.Button(body.transform, "Skin", () => PickSkin(index), 64f);
+            card.Skin = StudioUi.Swatch(body.transform, Color.white, 28f, () => PickSkin(index));
+            StudioUi.Toggle(body.transform, "Select", false, v => { card.Selected = v; UpdateExportButton(); }, 96f);
+
+            var row = StudioUi.Row(col.transform, "Buttons", 34f, 6f);
+            card.Lock = StudioUi.Toggle(row.transform, "Lock", false, v => characters[index].Locked = v, 90f);
+            StudioUi.Button(row.transform, "Reroll", () => Reroll(index), 100f);
+            return card;
+        }
+
+        private void Redraw(int i)
+        {
+            var c = characters[i];
+            var card = cards[i];
+            app.Renderer.Draw(card.Display, c);
+            card.Species.SetValueWithoutNotify(Data.SpeciesNames.IndexOf(c.SpeciesName));
+            card.Skin.color = c.Body.SkinColor;
+            card.Lock.SetIsOnWithoutNotify(c.Locked);
+            UpdateWarningsButton();
+        }
+
+        private void RandomizeAll()
+        {
+            var species = ChosenSpecies();
+            if (species.Count == 0) { ShowStatus(NoSpecies, true); return; }
+            for (int i = 0; i < characters.Count; i++)
+            {
+                if (characters[i].Locked) continue;
+                characters[i] = NewCharacter(species);
+                Redraw(i);
+            }
+            ShowStatus("", false);
+        }
+
+        private void EquipRandom()
+        {
+            for (int i = 0; i < characters.Count; i++)
+            {
+                if (characters[i].Locked) continue;
+                roller.RollGear(characters[i], random, rng);
+                forced.Apply(characters[i], roller, rng);
+                Redraw(i);
+            }
+            ShowStatus("", false);
+        }
+
+        private void Reroll(int i)
+        {
+            var species = ChosenSpecies();
+            if (species.Count == 0) { ShowStatus(NoSpecies, true); return; }
+            bool locked = characters[i].Locked;
+            characters[i] = NewCharacter(species);
+            characters[i].Locked = locked;
+            Redraw(i);
+        }
+
+        private void ChangeSpecies(int i, int option)
+        {
+            var c = characters[i];
+            roller.ChangeSpecies(c, Data.SpeciesNames[option], random, rng);
+            if (!c.Locked) forced.Apply(c, roller, rng);
+            Redraw(i);
+        }
+
+        private void PickSkin(int i)
+        {
+            var c = characters[i];
+            var palette = Data.Registry.Colors.ResolveColorField(Data.Registry.Species[c.SpeciesName].SkinColor);
+            new SwatchPicker(canvas, $"Skin color: {c.SpeciesName}", palette, color =>
+            {
+                c.Body.SkinColor = color;
+                Redraw(i);
+            });
+        }
+
+        // ---- species and settings windows ----
+
+        private void OpenSpecies()
+        {
+            search.text = "";
+            new SpeciesPickerView(canvas, Data.SpeciesNames, S.excludedSpecies, () =>
+            {
+                app.SaveSettings();
+                UpdateSpeciesButton();
+            });
+        }
+
+        private void OpenSettings()
+        {
+            search.text = "";
+            new SettingsWindow(canvas, Data, random);
+        }
+
+        private void UpdateSpeciesButton()
+        {
+            int n = ChosenSpecies().Count;
+            speciesButton.GetComponentInChildren<TMP_Text>().text = $"Species ({n}/{Data.SpeciesNames.Count})";
+            if (n == 0) ShowStatus(NoSpecies, true);
+            else if (status.text == NoSpecies) ShowStatus("", false);
+        }
+
+        // ---- search and forced items ----
+
+        private static RectTransform CreateResultsPanel(Transform searchInput)
+        {
+            var go = new GameObject("SearchResults", typeof(RectTransform), typeof(Image),
+                typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            go.transform.SetParent(searchInput, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0, 1);
+            rt.anchoredPosition = new Vector2(0, -4);
+            rt.sizeDelta = new Vector2(640, 0);
+            go.GetComponent<Image>().color = StudioUi.PanelColor;
+            var col = go.GetComponent<VerticalLayoutGroup>();
+            col.padding = new RectOffset(6, 6, 6, 6);
+            col.spacing = 2f;
+            col.childControlWidth = col.childControlHeight = true;
+            col.childForceExpandHeight = false;
+            go.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            // Draw above the card grid, which comes later in the hierarchy.
+            var overlay = go.AddComponent<Canvas>();
+            overlay.overrideSorting = true;
+            overlay.sortingOrder = 50;
+            go.AddComponent<GraphicRaycaster>();
+            go.SetActive(false);
+            return rt;
+        }
+
+        private void ShowResults(string query)
+        {
+            for (int i = results.childCount - 1; i >= 0; i--)
+                UnityEngine.Object.Destroy(results.GetChild(i).gameObject);
+            if (string.IsNullOrWhiteSpace(query))
+            {
+                results.gameObject.SetActive(false);
+                return;
+            }
+            results.gameObject.SetActive(true);
+            var overlay = results.GetComponent<Canvas>(); // nested canvases can drop these when first enabled
+            overlay.overrideSorting = true;
+            overlay.sortingOrder = 50;
+
+            var found = ItemSearch.Find(Data, query, MaxResults);
+            foreach (var item in found.Items)
+            {
+                var it = item;
+                var button = StudioUi.Button(results, $"{it.Token}   {ItemSearch.Description(Data, it.ItemType)}", () => AddForced(it), -1f);
+                var text = button.GetComponentInChildren<TMP_Text>();
+                text.alignment = TextAlignmentOptions.MidlineLeft;
+                text.margin = new Vector4(10, 0, 0, 0);
+                button.interactable = !forced.Items.Contains(it); // already a chip
+            }
+            if (found.Total == 0)
+                StudioUi.Label(results, "No match. Try hd01-0001, a file name, or a word like hat.", 18f);
+            else if (found.Total > found.Items.Count)
+                StudioUi.Label(results, $"Showing {found.Items.Count} of {found.Total}. Type more to narrow it.", 18f);
+        }
+
+        private void AddForced(ForcedItem item)
+        {
+            if (!forced.TryAdd(item, out var message))
+            {
+                ShowStatus(message, true);
+                return;
+            }
+            search.text = "";
+            AddChip(item);
+            for (int i = 0; i < characters.Count; i++)
+            {
+                if (characters[i].Locked) continue;
+                forced.Apply(characters[i], roller, rng);
+                Redraw(i);
+            }
+            ShowStatus($"Forced {item} on every unlocked character. It stays through Randomize All and Equip Random.", false);
+        }
+
+        private void AddChip(ForcedItem item)
+        {
+            string label = item.Token + "  x";
+            var chip = StudioUi.Button(forceRow, label, () => RemoveForced(item), 9f * label.Length + 30f);
+            chip.GetComponent<Image>().color = StudioUi.ChipColor;
+            chip.GetComponentInChildren<TMP_Text>().fontSize = 17f;
+            chips[item] = chip.gameObject;
+            noChips.gameObject.SetActive(false);
+        }
+
+        private void RemoveForced(ForcedItem item)
+        {
+            var before = forced.Items.ToList();
+            forced.Remove(item);
+            if (chips.TryGetValue(item, out var chip))
+            {
+                UnityEngine.Object.Destroy(chip);
+                chips.Remove(item);
+            }
+            noChips.gameObject.SetActive(chips.Count == 0);
+            for (int i = 0; i < characters.Count; i++)
+            {
+                if (characters[i].Locked) continue;
+                ForcedItems.Strip(characters[i], before);
+                forced.Apply(characters[i], roller, rng);
+                Redraw(i);
+            }
+            ShowStatus($"Removed {item}. Its slot stays empty until the next Randomize All or Equip Random.", false);
+        }
+
+        // ---- export ----
+
+        private void SetExportFolder(string value)
+        {
+            string v = (value ?? "").Trim().Trim('"');
+            if (v.Length > 0 && !Path.IsPathRooted(v))
+            {
+                ShowStatus(@"Use a full folder path, for example C:\Users\you\Pictures\Starquill.", true);
+                return;
+            }
+            S.exportFolder = v;
+            app.SaveSettings();
+            ShowStatus($"Exports go to {S.ResolvedExportFolder}", false);
+        }
+
+        private void Export()
+        {
+            string folder = S.ResolvedExportFolder;
+            var targets = Enumerable.Range(0, characters.Count).Where(i => cards[i].Selected).ToList();
+            if (targets.Count == 0) targets = Enumerable.Range(0, characters.Count).ToList();
+            try
+            {
+                Directory.CreateDirectory(folder);
+                var today = DateTime.Now;
+                foreach (int i in targets)
+                {
+                    var png = app.Renderer.ExportPng(characters[i], StudioSettings.SnapScale(S.exportScale), S.trim, S.padding);
+                    File.WriteAllBytes(ExportNamer.UniquePath(folder, ExportNamer.FileName(characters[i].SpeciesName, i + 1, today)), png);
+                }
+                ShowStatus($"Exported {targets.Count} PNGs to {folder}", false);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is NotSupportedException)
+            {
+                ShowStatus($"Could not write to {folder}: {e.Message}. Nothing was lost; pick another folder.", true);
+            }
+            UpdateWarningsButton();
+        }
+
+        private void OpenExportFolder()
+        {
+            string folder = S.ResolvedExportFolder;
+            try
+            {
+                Directory.CreateDirectory(folder);
+                Application.OpenURL(new Uri(folder).AbsoluteUri);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ArgumentException || e is NotSupportedException || e is UriFormatException)
+            {
+                ShowStatus($"Could not open {folder}: {e.Message}", true);
+            }
+        }
+
+        private void UpdateExportButton()
+        {
+            int n = cards.Count(c => c.Selected);
+            exportButton.GetComponentInChildren<TMP_Text>().text = n > 0 ? $"Export selected ({n})" : $"Export all ({cards.Count})";
+        }
+
+        // ---- status ----
+
+        private void ShowStatus(string message, bool error)
+        {
+            status.color = error ? StudioUi.ErrorColor : StudioUi.TextColor;
+            status.text = message;
+        }
+
+        private void UpdateWarningsButton()
+        {
+            int count = Data.Issues.Count + app.Renderer.Resolver.MissingPaths.Count;
+            warnings.GetComponentInChildren<TMP_Text>().text = $"Warnings ({count})";
+        }
+    }
+}
+```
+
+**Step 2: Compile** (none). Check the Console for new warnings in `Assets/Scripts/Studio`. Probe `BulkScreen` constructor `(Transform, StudioApp)`.
+
+**Step 3: Commit**
+
+```bash
+git add Assets/Scripts/Studio/UI/BulkScreen.cs
+git commit -m "feat(studio): Bulk screen complete (species, search and forced items, card species and skin, selected export, export folder)"
+```
+
+---
+
+## Task 23: Editor smoke run and Linux build
+
+**Files:** none new (unless a fix is needed).
+
+**Step 1: Smoke run in the Editor (executor)**
+
+Open `Assets/Scenes/CharacterStudio.unity` (see Facts: dirty ExploreScene check), `play_game`, then drive it with a scratchpad script that finds objects by name and invokes them (B1's `Drive.cs` pattern):
+- 8 cards; top bar shows `Species (27/27)`; the bottom shows `Export all (8)`.
+- Type `hat` in the search field (`TMP_InputField.text = "hat"`): `SearchResults` is active with 15 buttons and a "Showing 15 of N" label. Invoke the first result: a chip named after the token appears in the `Force` row, `SearchResults` hides, and the status says "Forced ...". (Which slot the item lands in is covered by `ForcedItemsTests`; the capture below shows it on the cards.)
+- Search `w04`, add it; then search `w08` and add it: refused with a "two-handed" status in red.
+- Lock card 1, Randomize All: card 1's species unchanged; the forced hat is on every other card.
+- Change card 2's species dropdown to `stone golem`: no hat on card 2 (restricted), body redrawn.
+- Open Species, press None: the button shows `Species (0/27)` and Randomize All shows the red NoSpecies message; press All.
+- Open Settings: the popup lists sliders; Reset to defaults reopens it; Close.
+- Select cards 1 and 3: the button says `Export selected (2)`; Export writes 2 PNGs to `Library/CharacterStudio/exports`; delete them afterwards.
+- `capture_ui_canvas` of `StudioCanvas`: labels on one line, dropdowns show a triangle arrow.
+- `get_unity_logs` errors: none from `Starquill.Studio` (the Coplay capture's "Releasing render texture" error is the tool's own, B1).
+
+Stop play. Fix any exception before the build; layout polish waits for Zach.
+
+**Step 2: Linux build**
+
+Run `CharacterStudioTools.BuildLinux()` through a scratchpad script (it times out in Coplay after 60 s and keeps running); wait for a new `Character Studio build` line in `~/.config/unity3d/Editor.log`. Record the size. Save `git diff ProjectSettings/` before the build and confirm it is unchanged after. (The Windows build waits for B6 or Zach's request.)
+
+**Step 3: Update the progress doc and commit**
+
+```bash
+git add docs/plans/2026-11-08-character-studio-progress.md
+git commit -m "docs: Character Studio B2 done, CHECKPOINT E pending"
+```
+
+**CHECKPOINT E (Zach):**
+- Test Runner > EditMode > Run All: all green except the 2 known old failures. New B2 tests: `ItemSearchTests` (7 tests, 10 cases), `StudioRollerItemTests` (5), `ForcedItemsTests` (12 tests, 14 cases), `StudioSettingsTests` (+3).
+- In the Editor or the Linux build: Species window (uncheck a few, Randomize All only rolls checked ones; restart remembers them), search by `hd01-0001`, by a pasted file name, by `hat`; add chips, remove one with its x; Equip Random keeps the forced items; a weapon conflict shows a red message; card species and skin; Settings sliders change the next roll (e.g. Head 0 gives no hats); Select a few and export; type an export folder.
+- Then: detailed tasks for B3 (Single screen).
+
+---
+
+## Stages B3-B6 (outline; detailed after the previous checkpoint)
+
+B2 is detailed above (Tasks 14-23).
+
 
 **B3 Single screen**
 - Large preview (~800 px), background toggle checkerboard / white / dark; Body and Gear tabs.
