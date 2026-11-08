@@ -28,7 +28,7 @@ Two parts:
 
   Weapons match disk.
 - **`0000` species parts.** Face/hair/skeleton parts on disk start at `0000`, but both the Godot and Unity code pick from `0001`. The `0000` files are: exact copies of `0001` (h01-h04 every layer, f04); different, never-shown drawings (f01, f02, f03, f05, f06, s01, s02, s03); and one empty image (s04). Equipment and weapons have no `0000`.
-- **Misnamed files exist.** `Artboard 1hd10-0001-094.png` (identical to `hd10-0001-094.png`) and `Artboard 1hd10-0004-094.png` (a *different* drawing than `hd10-0004-094.png`).
+- **Misnamed files exist.** `Artboard 1hd10-0001-094.png` (same outline as `hd10-0001-094.png`, different gray shading in 312 pixels) and `Artboard 1hd10-0004-094.png` (a *different* drawing than `hd10-0004-094.png`). Both await the artist.
 - **One rule lives only in C#.** Which layers each face/hair group draws on (`f01` → 84, `h04` → 92/128/154, ...) is hardcoded in `DisplayDataRegistry.LoadLayerMappings`.
 - **Runtime cost of the JSON is small** (5 files, 47 KB, parsed at startup). Baking is chosen because a build step exists anyway, not because parsing is slow.
 
@@ -173,5 +173,5 @@ The artist README (`docs/character-studio-readme.md`) is written after testing: 
 
 ## Open items
 
-- Which `hd10-0004` headband drawing is correct (artist).
+- Which `hd10-0001` and `hd10-0004` headband drawings are correct, the `Artboard` copies or the named files (artist).
 - Confirm the GitHub login of the artist (`rungsglas` is the other collaborator).
