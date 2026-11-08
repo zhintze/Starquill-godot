@@ -1,25 +1,25 @@
 # Character Studio Progress and Resume Notes
 
-2026-11-08 (updated 2026-11-08: handoff to a fresh session for Phase A) · Read this before resuming.
+2026-11-08 (updated 2026-11-08: Phase A done; handoff to a fresh session for Phase B Stage B1) · Read this before resuming.
 
 Mandate: "creating a standalone character selector/generator ... that exports generated and curated characters into standalone separate images with a transparent background as a png file for use in promotional content", built on "our current object oriented system", with the art rules "only storing in one place to avoid [them getting unsynced]" and "human readable AND make for easy git diffs" (Zach, 2026-11-08).
 
-Done when (Phase A, this handoff):
-- Tasks 1-17 of the plan are committed on `unity-idle-clicker`, each with the evidence the plan asks for.
-- `dotnet test tools/ArtTablesTests` passes, including `--filter Category=RepoData` with only the 3 expected warnings (2 `Artboard` files, bridge troll `hd14`).
-- Zach has reported checkpoints A, B and C green (Test Runner all EditMode + play-test).
-- The five art JSON files are gone and nothing reads them.
+Done when (Stage B1, this handoff):
+- Phase B plan Tasks 1-13 are committed on `unity-idle-clicker`, each with the evidence its steps ask for (compile check plus a reflection probe for new types; commit hash).
+- `Tools > Character Studio > Build Linux` and `Build Windows` both report `Succeeded`, with sizes recorded here.
+- Zach has reported CHECKPOINT D: Test Runner all EditMode green except the 2 known old failures (Open flags), the `StudioPixelMatchTests` numbers, and the studio tried in the Editor and as the Linux build.
 
-- **Plan:** `docs/plans/2026-11-08-character-studio-plan.md` · **Design:** `docs/plans/2026-11-08-character-studio-design.md` (decisions D1-D12) · **Branch:** `unity-idle-clicker` (not pushed)
-- **Process:** superpowers:executing-plans, batches ending at the plan's checkpoints (A after Task 9, B after Task 14, C after Task 17). Phase B (studio app) is planned only after checkpoint C.
+- **Plan:** `docs/plans/2026-11-08-character-studio-phase-b-plan.md` (Stage B1 in full, B2-B6 outlined; planning decisions P1-P7 at its top) · **Design:** `docs/plans/2026-11-08-character-studio-design.md` (D1-D12) · **Phase A plan:** `docs/plans/2026-11-08-character-studio-plan.md` · **Branch:** `unity-idle-clicker` (not pushed)
+- **Process:** superpowers:executing-plans; one batch, Tasks 1-13, ending at CHECKPOINT D. B2's detailed tasks are written only after CHECKPOINT D.
 
 ## Run rules for the executing session
 
-- Stop and wait for Zach at each **CHECKPOINT**. Never run the Unity Test Runner from a script (it crashed the Editor before; see memory `current-status.md`). The headless `dotnet test` runs are yours.
-- Tasks 8 and 9 move and delete files under `Assets/`: the Unity Editor must be closed. If it is open, ask Zach to close it.
-- Progress watchdog: three attempts in a row on one task with no new passing test or commit means stop and report.
-- Retry budget: a failing command at most twice, each after a change. `dotnet` package restore failing for network reasons is a tooling failure: report it, do not loop.
-- Load-bearing fork the plan does not settle (for example, the migration dry run printing something other than the expected list, or more RepoData warnings than the 3 expected): stop and report it as a decision block with a recommended default. Do not edit art or CSV values to silence a warning.
+- Stop at **CHECKPOINT D** and wait for Zach. Never run the Unity Test Runner from a script (it crashed the Editor before). The Editor must be open with Coplay connected; if Coplay reports "Unity Editor is not running", ask Zach to open it.
+- Compile checks: write an `AssetDatabase.Refresh()` script in the scratchpad (never under `Assets/`), run it with Coplay `execute_script`, then `check_compile_errors`, then a reflection probe that the new type or member exists. A bare "No compile errors" can be stale.
+- Coplay `play_game` / `capture_ui_canvas` / `stop_game` and the build menu via `execute_script` are allowed (Task 13). Build result lines land in `~/.config/unity3d/Editor.log`, not the Coplay log buffer.
+- Progress watchdog: three attempts in a row on one task with no new compile-clean probe or commit means stop and report.
+- Retry budget: a failing command at most twice, each after a change. Coplay disconnects and Editor hangs are tooling failures: report them, do not loop.
+- API mismatches between the plan's code and the installed Unity/uGUI/TMP (a renamed member, an obsolete warning) are fixed in place and listed as deviations in the Status row. A **load-bearing fork** the plan does not settle (for example the pixel-match test failing, a studio build too large to hand the artist, or a needed change to a game class beyond `ImageResolver`/`CharacterDisplay`): stop and report it as a decision block with a recommended default.
 - Subagents: none required. If you use any, follow the handoffs skill for their briefs.
 
 ## Status
@@ -27,61 +27,60 @@ Done when (Phase A, this handoff):
 | Task | State | Evidence |
 |---|---|---|
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
-| Plan | done | `fde82549` |
-| **Phase A** | **done, CHECKPOINT C green** | 18 commits `1756e7fa`..`f88cb6c2` on `unity-idle-clicker`, not pushed |
-| Phase B plan | written: B1 in full (Tasks 1-13, CHECKPOINT D), B2-B6 outlined | `docs/plans/2026-11-08-character-studio-phase-b-plan.md`; Windows Build Support (Mono) installed (Zach, 2026-11-08) |
-| B1 Tasks 1-13 | not started | |
-| 1 CsvTable + test project | done | `dotnet test tools/ArtTablesTests`: Passed 7, Failed 0 (failing build first: `Starquill.Data` not found). Deviation: `.gitignore` also got `!tools/ArtTablesTests/ArtTablesTests.csproj`, because Unity's `*.csproj` rule ignored it |
-| 2 ArtFileName | done | `dotnet test tools/ArtTablesTests`: Passed 20, Failed 0 (7 + 13; failing build first: `ArtFileName` not found) |
-| 3 ArtTableData + ArtCells | done | `dotnet test tools/ArtTablesTests`: Passed 41, Failed 0 (failing build first: `ArtCells` not found) |
-| 4 Converter: palettes, equipment | done | `dotnet test tools/ArtTablesTests`: Passed 56, Failed 0 (failing build first: `ArtTablesConverter` not found) |
-| 5 Converter: weapons, part groups | done | `dotnet test tools/ArtTablesTests`: Passed 63, Failed 0 (7 new tests failed first) |
-| 6 Converter: species, skin variance | done | `dotnet test tools/ArtTablesTests`: Passed 71, Failed 0 (7 new tests failed first; `Species_FullPartToken_IsAccepted` passed before the code, it only asserts no errors) |
-| 7 ArtRepo | done | `dotnet test tools/ArtTablesTests`: Passed 72, Failed 0 (failing build first: `ArtRepo` not found) |
-| 8 `0000` cleanup | done | Dry run classification matched the plan (copies f04 h01-h04, empty s04, unique f01 f02 f03 f05 f06 s01-s03). Deviation: s01-s03 renumbered to `0003`, not the plan's `0004` (those groups hold 0000-0002 only; next free is 0003). PNGs 4108 -> 4098; `grep -c -- -0000-` = 0; git shows only species PNG + .meta deletes/renames |
-| 9 Folder per type + paths | done; CHECKPOINT A green (Zach, 2026-11-08) | Move: 4098 PNGs before and after, 4098 `.meta`, 78 new folder `.meta`; only the 2 `Artboard` files at `find -maxdepth 2`. Coplay `check_compile_errors`: none. Test Runner: 550/552 passed; the 2 failures predate Phase A (see Open flags), Zach counted the checkpoint green without fixing them. Play-test: ExploreScene looks fine; Console has no `Sprite not found` |
-| 10 CSVs + RepoData test | done | RepoData test Skipped before the tables existed. `csv` dry run: 49 / 9 / 27 / 19 / 17 skin variance / 1905 palette rows. `dotnet test --filter Category=RepoData`: Passed, warnings exactly the 3 expected (2 `Artboard`, bridge troll `hd14` on species.csv line 23). Full run: Passed 73. Folder variant counts fe02 hd08 hd10 tr14 = 71 35 14 17 |
-| 11 Baker + asset + audit | done | Coplay `check_compile_errors`: none. Console: `Art tables baked: 49 equipment, 9 weapons, 27 species, 19 part groups; 0 error(s), 3 warning(s).` `ArtTables.asset` exists, `git status` silent (ignored). Check Images: 171 warnings in 6.1 s (5 empty, 166 same-pixel layers; 36 whole-variant duplicates, see Open flags). CSV edit and a new `hd01-0999-130.png` both rebaked (after the Editor window got focus) with no new warnings; the new PNG imported as Sprite, Single, 100 PPU, Bilinear, max 256, Uncompressed, no mipmaps. Test edits reverted |
-| 12 Palettes from ArtTables | done | Coplay `check_compile_errors`: none, after a probe confirmed the recompile (`ColorManager.LoadPalettes` present, `LoadFromJson` gone, `ArtFixtures` compiled). `grep LoadFromJson` leaves only AbilityTable/QuestZone/NameGenerator callers. Unity tests wait for CHECKPOINT B |
-| 13 Registry reads ArtTables | done | New `DisplayDataRegistryTests` first failed to compile (`Load`, `ModularPartVariants`, `Variants` missing); after the change Coplay `check_compile_errors`: none, probe confirms `Load` present. `grep ModularPartCounts\|ParseSpeciesJson\|ParseEquipmentJson Assets`: nothing |
-| 14 Catalog + factory variant sets | done; CHECKPOINT B green (Zach, 2026-11-08) | Test Runner: 556 total, 554 passed, 2 failed (only the 2 known old ones). Play-test and existing save confirmed by Zach. Before that: Coplay `check_compile_errors`: none; probe confirms `EquipmentCatalog.Load` and `ArtFixtures.SixSlotCatalog`. `grep AmountPerLayer\|.Amount\|LoadEquipmentJson\|LoadWeaponsJson Assets`: nothing. `dotnet test`: 73 passed. Deviation: tests and code went in one pass, so there was no separate failing compile for this task. The three inline test catalogs matched the fixture exactly |
-| 15 Delete art JSON | done | Wider grep: only `tools/color_pools.py` still read `color_palettes.json` (Task 16). 5 JSON + `.meta` removed; `migrate_art_tables.py csv` now exits with the retired message. Linux build via Coplay: Succeeded in 49 s; Editor.log shows 171 `Art images` warnings, then `Art tables baked: ...; 0 error(s), 3 warning(s).`, then `BuildPlayer: start`. With `hd01` `layer_codes` = `abc`: build Failed in 6 s with `Art tables: Error: equipment.csv line 9 ...` and `BuildFailedException: Art tables have errors`. Cell restored (git clean), rebaked: 49 equipment, 0 errors |
-| 16 Python tools read CSVs | done | `color_pools.py --help` exits 0. Served page (curl, port 8799): 1027 swatches; old JSON `main` had 1027 unique, CSV `main` 1027 unique. Server stopped, overrides file untouched. README: palette path, `migrate_art_tables.py`, `ArtTablesTests` |
-| 17 Docs | done | `implemented-systems.md` §1, §4, §5, §6, §10; `CLAUDE.md` Paper Doll, Data Loading, Editor Tools, Known Gotchas; design doc status line. Grep for the old JSON names and `SpriteImportFixer` in those docs: none. CHECKPOINT C green (Zach, 2026-11-08): Test Runner 554/556 (the 2 known failures, results file 14:50), play-test fine |
+| Phase A (Tasks 1-17) | done, checkpoints A, B, C green | 18 commits `1756e7fa`..`f88cb6c2`; Test Runner 554/556 (2 known old failures), results file 2026-11-08 14:50; `dotnet test tools/ArtTablesTests` 73 passed, RepoData 3 expected warnings |
+| Phase B plan | done | `08b23989` |
+| B1 1-13 | not started | |
 
 ## Decision map
 
-Design-level decisions D1-D12 are in the design doc's Decisions table; they are not repeated here.
+Design-level decisions D1-D12 are in the design doc; planning decisions P1-P7 are in the Phase B plan. Not repeated here.
 
 ### Handoff
+
 ### Decision: execute in the main checkout, not a git worktree
-- Serves: Done when, Tasks 8-9 and the checkpoints
-- Beat the runner-up because: Zach plays and runs the Test Runner in the Editor that has this checkout's `Library/` imported; a worktree would need a full multi-minute reimport of ~4,100 sprites and a second Editor project for every checkpoint.
-- Deferred: worktree per task batch: only worth it if parallel work lands on `unity-idle-clicker` during Phase A.
+- Serves: Done when (CHECKPOINT D in the Editor Zach uses)
+- Beat the runner-up because: the Editor and Test Runner Zach uses have this checkout's `Library/` imported; a worktree means a multi-minute reimport of ~4,100 sprites and a second Editor project per checkpoint.
+- Deferred: worktree per batch: only if parallel work lands on `unity-idle-clicker`.
 - Ruled out: none.
-- Evidence: superpowers:executing-plans suggests a worktree; this overrides it for a Unity project.
+- Evidence: Phase A ran this way through three checkpoints.
+
+### Decision: Phase B lands in stages; only B1 is detailed
+- Serves: Done when (B1); mandate ("exports ... png ... for promotional content" is B1's core)
+- Beat the runner-up because: B2-B6 build on B1's real classes (`StudioCharacter`, `StudioRoller`, `StudioRenderer`, `StudioUi`); detailing them now would mean guessing APIs, the reason Phase B waited for Phase A.
+- Deferred: detailing B2 (full Bulk screen) now: after CHECKPOINT D. Splitting B1 further: B1 is the smallest slice that gives the artist exported PNGs.
+- Ruled out: none.
+- Evidence: `docs/plans/2026-11-08-character-studio-phase-b-plan.md` "Scope of this document".
+
+### Decision: species size stays off in the game and the studio
+- Serves: D1 (the studio draws exactly what the game draws)
+- Beat the runner-up because: Zach decided (2026-11-08) to keep it disabled while he takes the options to the artist.
+- Deferred: (a) shared tall canvas where characters stand side by side, fit-to-frame in portraits and cards; (b) scale everywhere on one shared canvas; (c) special rules for a few species with most differences reduced sharply (Zach's suggestion). All in the `docs/roadmap.md` backlog item.
+- Ruled out: scale only below 1: arbitrary, the 1.1-1.4 species stay wrong.
+- Evidence: `7477c365`; Phase B plan P3.
 
 ## Digest
 
-- **Established:** the JSON art counts are stale (fe02 69/71, hd08 34/35, hd10 11/14, tr14 15/17 files); every multi-layer item and part group has all layers for every variant; `0000` parts split into copies (f04, h01-h04), empty (s04), unique (f01 f02 f03 f05 f06 s01 s02 s03), verified with full RGBA comparison; both `Artboard 1hd10-*` files differ from their namesakes; 27 species, 49 equipment types, 9 weapon types, 19 part groups.
-- **Ruled out:** Python port of the renderer (D1: must reuse the game's classes); CSV plus committed JSON (two stores drift); hand-typed variant counts (D4).
+- **Established:**
+  - Art data is six CSVs in `Assets/Data/ArtTables/`, converted by `ArtTablesConverter` (pure C#, `Assets/Scripts/Data/Art/`); the game reads the baked `Resources/ArtTables.asset`, the studio converts in memory from the repo clone. 27 species, 49 equipment types, 9 weapon types, 19 part groups.
+  - All art PNGs are 200×200 except `species/body/0026-037.png` (201×201); `CharacterDisplay` at texture `200 × k` is the canvas at `k×`; the game renders at 400.
+  - The auto-rebake after a CSV/PNG change runs on the Editor's next update, which on this Linux box waits for window focus; scripted, call `ArtTablesBaker.Bake()` directly.
+  - The Coplay log buffer does not show logs written during a player build; read `~/.config/unity3d/Editor.log`.
+  - The Task 15 Linux test build (all art in `Resources`) took 49 s and was 719 MB, 626 MB of it `resources.assets.resS`.
+- **Ruled out:** Python port of the renderer (D1); CSV plus committed JSON (D2); hand-typed variant counts (D4); UI Toolkit and native file dialogs for the studio (P1, P2).
 - **Open threads:**
   - which `hd10-0001` / `hd10-0004` headband drawings are right (artist, design Open items)
   - whether `rungsglas` is the artist's GitHub login (design Open items)
-  - save file protection is a separate backlog item (`docs/roadmap.md`)
+  - species size options (artist; decision above)
+  - save file protection (backlog, `docs/roadmap.md`)
 
 ## Next step
 
-Execute Phase B Stage B1 (Tasks 1-13) with superpowers:executing-plans, stopping at CHECKPOINT D. Planning decisions P1-P7 are in the Phase B plan.
+Phase B plan Task 1 (studio assembly), then Tasks 2-13 in order; Task 2 is the only one that touches game code (`ImageResolver`, `CharacterDisplay`), so a mistake there shows in the game too: compile-check it before moving on.
 
 ## Open flags
 
-- Task 8: the plan expected s01-s03 `0000` to become `0004`; the script's next-free rule gave `0003`. The JSON count for s01-s03 is 3, so the game already asked for a missing `0003`; it now finds the renumbered drawing, which means those three drawings become visible in play before Task 14 (the plan said renumbered drawings stay hidden until then).
-- Two EditMode tests fail, both since 2026-07-02 and unrelated to Phase A; Zach said note them and do not fix now (2026-11-08). Expect 2 failures at checkpoints B and C:
-  - `ColorFamilyTests.Classify_KnownColors(0.82, 0.71, 0.55, Brown)` gets Pastel: the Pastel rule from `144845e1` catches this tan; the test case is stale (the same file lists `#C7A68B` tan as Pastel).
-  - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K`: `TavernPresenter.RecruitLabel` drops the `g` every other price label shows (real UI bug).
-- Check Images (Task 11): 5 empty images (`ar02-0010-034`, one each in tr14, s04, w05, w06) and 36 whole-variant duplicates (every layer identical), e.g. tr03 0107-0111 = 0007-0011, f02 0211-0220 = 0052-0061, h01 x5. Three of them are `0000` drawings renumbered in Task 8, which only compared `0000` with `0001`: f02 0221 = 0055, f05 0067 = 0002, f06 0054 = 0002. Art left untouched (artist decides). Full list: rerun Tools > Art Tables > Check Images.
-- The auto-rebake runs on the Editor's next update, which on this Linux box waits until the Editor window has focus. A scripted `AssetDatabase.Refresh` from Coplay queues it but does not run it; call `ArtTablesBaker.Bake()` directly when scripting.
-- The PC crashed during the Phase A session (Zach, 2026-11-08); likely why scratchpad helper files vanished around 14:45. No repo files were affected.
-- Species `x_scale`/`y_scale` are never drawn (found while planning Phase B, 2026-11-08). The Sprint 2 port (`71a03c52`, `862d5a45`, 2026-02-13) copied them into `SpeciesDisplayData`/`SpeciesInstanceData`; no renderer reads them. Godot applied them everywhere: `character_display.gd` scaled the whole doll about the bottom-center (feet), and the randomizer export grew the canvas to 200 × scale. 10 species are affected (fairy 0.4, gnome y 0.7, dwarf 1.1/0.8, divine elf y 1.1, naga/djinn 1.1, ogre/cyclops ogre 1.2, bridge troll 1.3, stone golem 1.4). Head crops are the defaults (0.35/0.5) for all of them, so nothing was tuned around the omission. Canvas fact: a human with a hat spans rows 0-~184 of 200, so scaling up about the feet clips the head in today's fixed 200 px canvas. Zach (2026-11-08): backlog item in `docs/roadmap.md`; he is taking the options to the artist (one he named: special rules for a few species, most differences reduced sharply). Scale stays disabled; Phase B proceeds without it, so the studio exports at size 1 like the game.
-- Player builds carry all art uncompressed: `resources.assets.resS` was 626 MB in the Task 15 Linux test build (4,098 sprites × 160 KB, import setting Uncompressed). This affects the Android game build too (separate from the studio); the studio plan uses LZ4HC build compression (P6) and measures at CHECKPOINT D.
+- Two EditMode tests fail since 2026-07-02, unrelated to this work; Zach said note them and do not fix now. Expect exactly these 2 at CHECKPOINT D:
+  - `ColorFamilyTests.Classify_KnownColors(0.82, 0.71, 0.55, Brown)` gets Pastel (stale test case after `144845e1`).
+  - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K` (`TavernPresenter.RecruitLabel` drops the `g`: real UI bug).
+- Art problems for the artist, left untouched: 5 empty images (`ar02-0010-034`, one each in tr14, s04, w05, w06) and 36 whole-variant duplicates, including three `0000` drawings renumbered in Phase A Task 8 (`f02 0221` = `0055`, `f05 0067` = `0002`, `f06 0054` = `0002`). Full list: Tools > Art Tables > Check Images. The two `Artboard 1hd10-*` files still await the artist.
+- Player builds carry all art uncompressed (626 MB in a Linux build; the import setting is Uncompressed). This affects the Android game build too; outside Phase B. The studio uses LZ4HC (P6): record its build sizes at CHECKPOINT D.
