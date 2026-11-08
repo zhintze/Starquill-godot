@@ -1,0 +1,50 @@
+item_type,description,layer_codes,hidden_layers,color_variance_layers
+ar01,gloves,24 110,,
+ar02,bracers,34 142,,
+ar03,gauntlets,32 140,,
+ar04,bracelet,138,,
+ar05,wrist jewelry,144 146,,146
+fe01,shoes,40,,
+fe02,boots,44,,
+hd01,hat,130,,
+hd02,hat with detail,130 132,,132
+hd03,large hat,156,10 134 128 152,
+hd04,large hat with detail,156 158,10 134 128 152,156
+hd05,quarter helmet no det,160,10 134 130 132 156 158 128 154 152,
+hd06,quarter helmet det,160 162,10 134 130 132 156 158 128 154 152,160
+hd07,helmet no detail,160,10 134 130 132 156 158 128 154 96 122 123 152,
+hd08,helmet with detail,160 162,10 134 130 132 156 158 128 154 96 122 123 152,160
+hd09,eyemask/eyepatch,90,,
+hd10,headband,94,,
+hd11,glasses,96,,
+hd12,tight facemask,98,122 123 154,
+hd13,large facemask,136,122 123,
+lg01,tight pants under boot,42,,
+lg02,large pants over boot,46,,
+mc01,Pauldron - single small,116,,
+mc02,pauldrons,26 118,,
+mc03,weapon on back,12,,
+mc04,weapon on back w/ overbelt,12 72,,72
+mc05,ring,148,,
+mc06,cape,8 60,,
+mc07,large cape,6 120,,
+mc08,scarf,80,,
+mc09,earring,124,,
+mc10,necklace,62,,
+mc11,amulet,68 70,,70
+mc12,belt,56,,
+mc13,belt with buckle,56 58,,58
+tr01,shirt,18 48 104,,
+tr02,shirt with breasts,18 48 104,,
+tr03,sleeveless shirt,48,,
+tr04,sleeveless shirt with breasts,48,,
+tr05,dress,52,,
+tr06,sleeve dress,20 52 106,,
+tr07,vest,54,,
+tr08,coat,30 66 114,,
+tr09,tabard,78,,
+tr10,overbelt,74 76,,76
+tr11,light armor,22 50 108,,
+tr12,heavy armor,28 64 112,,
+tr13,hooded cloak,14 150 152,10 80 116 118 128 130 132 134 136,
+tr14,hoodless cloak,14 150,,

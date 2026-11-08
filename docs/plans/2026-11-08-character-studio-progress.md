@@ -37,7 +37,8 @@ Done when (Phase A, this handoff):
 | 7 ArtRepo | done | `dotnet test tools/ArtTablesTests`: Passed 72, Failed 0 (failing build first: `ArtRepo` not found) |
 | 8 `0000` cleanup | done | Dry run classification matched the plan (copies f04 h01-h04, empty s04, unique f01 f02 f03 f05 f06 s01-s03). Deviation: s01-s03 renumbered to `0003`, not the plan's `0004` (those groups hold 0000-0002 only; next free is 0003). PNGs 4108 -> 4098; `grep -c -- -0000-` = 0; git shows only species PNG + .meta deletes/renames |
 | 9 Folder per type + paths | done; CHECKPOINT A green (Zach, 2026-11-08) | Move: 4098 PNGs before and after, 4098 `.meta`, 78 new folder `.meta`; only the 2 `Artboard` files at `find -maxdepth 2`. Coplay `check_compile_errors`: none. Test Runner: 550/552 passed; the 2 failures predate Phase A (see Open flags), Zach counted the checkpoint green without fixing them. Play-test: ExploreScene looks fine; Console has no `Sprite not found` |
-| 10-17 | not started | |
+| 10 CSVs + RepoData test | done | RepoData test Skipped before the tables existed. `csv` dry run: 49 / 9 / 27 / 19 / 17 skin variance / 1905 palette rows. `dotnet test --filter Category=RepoData`: Passed, warnings exactly the 3 expected (2 `Artboard`, bridge troll `hd14` on species.csv line 23). Full run: Passed 73. Folder variant counts fe02 hd08 hd10 tr14 = 71 35 14 17 |
+| 11-17 | not started | |
 
 ## Decision map
 
@@ -63,7 +64,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 10 (generate the CSVs + RepoData smoke test).
+Plan Task 11 (ArtTables asset + Editor baker + import settings + image audit). Needs the Editor for verification.
 
 ## Open flags
 

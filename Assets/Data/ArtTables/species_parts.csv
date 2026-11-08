@@ -1,0 +1,20 @@
+group,description,layers
+f01,"eyes (angel, centaur, dark elf +17 more)",84
+f02,"nose (angel, centaur, dark elf +10 more)",86
+f03,"mouth (angel, centaur, dark elf +11 more)",85
+f04,"ears (angel, centaur, fairy +6 more)",100
+f05,"facial hair (angel, centaur, djinn +6 more)",122
+f06,"facial detail (angel, catfolk, centaur +8 more)",87
+h01,"hair (angel, centaur, dark elf +12 more)",92
+h02,"hair (angel, centaur, dark elf +12 more)",92 128
+h03,"hair (angel, centaur, dark elf +12 more)",92 154
+h04,"hair (angel, centaur, dark elf +12 more)",92 128 154
+d02,nose (dwarf),86
+d04,"ears (dwarf, gnome)",100
+d05,"facial hair (dwarf, gnome)",122
+d06,"facial detail (dwarf, gnome)",87
+g02,nose (gnome),86
+s01,head (skeleton),82
+s02,eyes (skeleton),84
+s03,nose (skeleton),86
+s04,facial detail (skeleton),87

@@ -1,0 +1,10 @@
+item_type,description,hand_type,modular,layer_codes,hidden_layers,color_variance_layers
+w01,sword 1 hand,one_handed,y,164 166 168,,166 168
+w02,axe 1 hand,one_handed,y,164 166,,166
+w03,mace 1 hand,one_handed,y,164 166,,166
+w04,two hand sword,two_handed,y,164 166 168,,166 168
+w05,two hand axe,two_handed,y,164 166 168,,166 168
+w06,magic,one_handed,y,164 166 168,,166 168
+w07,ranged,two_handed,y,164 166,,166
+w08,shield,one_handed,n,170,,
+w09,shield with detail,one_handed,n,170 172,,172
