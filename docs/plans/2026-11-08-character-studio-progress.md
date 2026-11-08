@@ -32,6 +32,10 @@ Done when (Stage B1, this handoff):
 | B1 1-13 | in progress (rows below) | Editor opened by Zach 2026-11-08; Coplay connected |
 | B1 T1-2 asmdef, sprite source | done | `e2615d67`; compile clean; probe: `ImageResolver(ISpriteSource)`, `MissingPaths`, `CharacterDisplay.Initialize(ImageResolver,Int32)`, `ImageResolverTests` present |
 | B1 T3 PixelOps | done | `29679a15`; compile clean; probe: `PixelOps` 5 methods, `PixelOpsTests` 5 tests |
+| B1 T4 DiskSpriteSource | done | `a39243c7`; compile clean; probe: `DiskSpriteSource(String)`, `FilePathFor`, `Load`, `Dispose`; 3 tests |
+| B1 T5 StudioData | done | `547bc9fd`; compile clean; smoke call: load 137 ms, 27 species, 49 armor types, 9 weapons, 3 issues, 0 errors |
+| B1 T6 StudioCharacter | done | `a4cc405b`; compile clean; probe: `StudioCharacter` (`ToDisplayList`, `SpeciesView`), `StudioItem`; 3 tests |
+| B1 T7 RandomSettings, StudioRoller | done | `d668cf35`; compile clean; smoke call: 300 rolls at chance 1, avg 10.0 items, 0 two-handed with off hand; 8 tests |
 
 ## Decision map
 
