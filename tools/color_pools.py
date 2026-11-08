@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Interactive color-pool review tool for Starquill's key color families.
 
-Serves a local page showing every "main" palette color grouped by its key
+Serves a local page showing every "main" palette color
+(Assets/Data/ArtTables/palettes.csv) grouped by its key
 family (classifier + manual overrides), and lets you select swatches and
 move them between pools -- including brand-new workshop pools. Saving
 writes Assets/Resources/Data/color_family_overrides.json, which the game
@@ -25,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PALETTES = ROOT / "Assets/Resources/Data/color_palettes.json"
+PALETTES = ROOT / "Assets/Data/ArtTables/palettes.csv"
 OVERRIDES = ROOT / "Assets/Resources/Data/color_family_overrides.json"
 
 # Enum families in save-contract order. KEEP IN SYNC with
@@ -65,7 +66,9 @@ def classify(r, g, b):
 
 
 def build_state():
-    palette = json.loads(PALETTES.read_text())["main"]
+    import csv
+    with PALETTES.open(newline="", encoding="utf-8-sig") as f:
+        palette = [row["hex"].lstrip("#").upper() for row in csv.DictReader(f) if row["palette"] == "main"]
     overrides = {}
     if OVERRIDES.exists():
         overrides = {k.upper(): v for k, v in json.loads(OVERRIDES.read_text()).items()}

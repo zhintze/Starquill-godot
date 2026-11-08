@@ -17,7 +17,7 @@ python3 tools/color_pools.py --no-browser
 
 No dependencies beyond the Python standard library. Stop with Ctrl+C.
 
-The page reads the palette (`color_palettes.json`), the classifier rules,
+The page reads the palette (`Assets/Data/ArtTables/palettes.csv`), the classifier rules,
 and the saved overrides fresh on every load: after changing any of them,
 refresh the browser.
 
@@ -93,3 +93,9 @@ headless on this machine: use Window > General > Test Runner.
   `docs/balance-analysis.md`).
 - `analyze_item_framing.py`: measures alpha-weighted sprite framing per item
   category to regenerate `ItemIconFraming` crops. Rerun when art changes.
+- `migrate_art_tables.py`: one-time, already run 2026-11; kept for history.
+  It moved the art PNGs into one folder per type and turned the art JSON into
+  the CSVs in `Assets/Data/ArtTables/`. Its `csv` step now refuses to run.
+- `ArtTablesTests/`: `dotnet test tools/ArtTablesTests` runs the art table
+  tests headless (no Unity needed); `--filter Category=RepoData` checks the
+  real CSVs and images in this repo.

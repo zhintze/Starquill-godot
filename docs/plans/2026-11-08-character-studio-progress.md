@@ -43,7 +43,8 @@ Done when (Phase A, this handoff):
 | 13 Registry reads ArtTables | done | New `DisplayDataRegistryTests` first failed to compile (`Load`, `ModularPartVariants`, `Variants` missing); after the change Coplay `check_compile_errors`: none, probe confirms `Load` present. `grep ModularPartCounts\|ParseSpeciesJson\|ParseEquipmentJson Assets`: nothing |
 | 14 Catalog + factory variant sets | done; CHECKPOINT B green (Zach, 2026-11-08) | Test Runner: 556 total, 554 passed, 2 failed (only the 2 known old ones). Play-test and existing save confirmed by Zach. Before that: Coplay `check_compile_errors`: none; probe confirms `EquipmentCatalog.Load` and `ArtFixtures.SixSlotCatalog`. `grep AmountPerLayer\|.Amount\|LoadEquipmentJson\|LoadWeaponsJson Assets`: nothing. `dotnet test`: 73 passed. Deviation: tests and code went in one pass, so there was no separate failing compile for this task. The three inline test catalogs matched the fixture exactly |
 | 15 Delete art JSON | done | Wider grep: only `tools/color_pools.py` still read `color_palettes.json` (Task 16). 5 JSON + `.meta` removed; `migrate_art_tables.py csv` now exits with the retired message. Linux build via Coplay: Succeeded in 49 s; Editor.log shows 171 `Art images` warnings, then `Art tables baked: ...; 0 error(s), 3 warning(s).`, then `BuildPlayer: start`. With `hd01` `layer_codes` = `abc`: build Failed in 6 s with `Art tables: Error: equipment.csv line 9 ...` and `BuildFailedException: Art tables have errors`. Cell restored (git clean), rebaked: 49 equipment, 0 errors |
-| 16-17 | not started | |
+| 16 Python tools read CSVs | done | `color_pools.py --help` exits 0. Served page (curl, port 8799): 1027 swatches; old JSON `main` had 1027 unique, CSV `main` 1027 unique. Server stopped, overrides file untouched. README: palette path, `migrate_art_tables.py`, `ArtTablesTests` |
+| 17-17 | not started | |
 
 ## Decision map
 
@@ -69,7 +70,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 16 (Python tools read the CSVs).
+Plan Task 17 (docs), then CHECKPOINT C.
 
 ## Open flags
 
