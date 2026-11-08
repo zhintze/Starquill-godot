@@ -32,7 +32,8 @@ Done when (Phase A, this handoff):
 | 2 ArtFileName | done | `dotnet test tools/ArtTablesTests`: Passed 20, Failed 0 (7 + 13; failing build first: `ArtFileName` not found) |
 | 3 ArtTableData + ArtCells | done | `dotnet test tools/ArtTablesTests`: Passed 41, Failed 0 (failing build first: `ArtCells` not found) |
 | 4 Converter: palettes, equipment | done | `dotnet test tools/ArtTablesTests`: Passed 56, Failed 0 (failing build first: `ArtTablesConverter` not found) |
-| 5-17 | not started | |
+| 5 Converter: weapons, part groups | done | `dotnet test tools/ArtTablesTests`: Passed 63, Failed 0 (7 new tests failed first) |
+| 6-17 | not started | |
 
 ## Decision map
 
@@ -58,7 +59,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 5 (converter part 2: weapons and part groups).
+Plan Task 6 (converter part 3: species, skin variance, cross-checks).
 
 ## Open flags
 

@@ -27,6 +27,8 @@ namespace Starquill.Data.Art
 
             ConvertPalettes(Open(src.PalettesCsv, PalettesFile, r), r);
             ConvertEquipment(Open(src.EquipmentCsv, EquipmentFile, r), files, r);
+            ConvertWeapons(Open(src.WeaponsCsv, WeaponsFile, r), files, r);
+            ConvertPartGroups(Open(src.SpeciesPartsCsv, SpeciesPartsFile, r), files, r);
 
             files.ReportUnusedFolders(r.Issues);
             return r;
@@ -73,6 +75,73 @@ namespace Starquill.Data.Art
                     hiddenLayers = hidden,
                     colorVarianceLayers = variance,
                     variants = files.CompleteVariants(ArtFileKind.Equipment, type, layers, r.Issues)
+                });
+            }
+        }
+
+        private static readonly Regex WeaponTypeRx = new Regex(@"^w\d{2}$");
+        private static readonly Regex GroupRx = new Regex(@"^[a-z]\d{2}$");
+
+        private static void ConvertWeapons(Table t, FileIndex files, ArtBakeResult r)
+        {
+            if (t == null || !t.Require("item_type", "description", "hand_type", "modular", "layer_codes", "hidden_layers", "color_variance_layers")) return;
+            var seen = new HashSet<string>();
+            for (int i = 0; i < t.Count; i++)
+            {
+                string type = t.Text(i, "item_type");
+                if (!WeaponTypeRx.IsMatch(type)) { t.Error(i, $"item_type '{type}' must look like w01"); continue; }
+                if (!seen.Add(type)) { t.Error(i, $"item_type {type} appears twice"); continue; }
+                string hand = t.Text(i, "hand_type");
+                if (hand != "one_handed" && hand != "two_handed") { t.Error(i, $"hand_type '{hand}' must be one_handed or two_handed"); continue; }
+                if (!ArtCells.TryBool(t.Text(i, "modular"), out bool modular)) { t.Error(i, $"modular '{t.Text(i, "modular")}' must be y or n"); continue; }
+                if (!t.Ints(i, "layer_codes", out var layers, required: true)) continue;
+                if (!t.Ints(i, "hidden_layers", out var hidden)) continue;
+                if (!t.Ints(i, "color_variance_layers", out var variance)) continue;
+                if (!variance.All(layers.Contains)) { t.Error(i, "color_variance_layers must also be listed in layer_codes"); continue; }
+
+                IntList[] perLayer;
+                if (modular)
+                {
+                    perLayer = files.VariantsPerLayer(ArtFileKind.Weapon, type, layers, r.Issues)
+                        .Select(v => new IntList(v)).ToArray();
+                }
+                else
+                {
+                    var shared = files.CompleteVariants(ArtFileKind.Weapon, type, layers, r.Issues);
+                    perLayer = layers.Select(_ => new IntList(shared)).ToArray();
+                }
+
+                r.Data.weapons.Add(new WeaponRow
+                {
+                    itemType = type,
+                    description = t.Text(i, "description"),
+                    handType = hand,
+                    modular = modular,
+                    layerCodes = layers,
+                    hiddenLayers = hidden,
+                    colorVarianceLayers = variance,
+                    variantsPerLayer = perLayer
+                });
+            }
+        }
+
+        private static void ConvertPartGroups(Table t, FileIndex files, ArtBakeResult r)
+        {
+            if (t == null || !t.Require("group", "description", "layers")) return;
+            var seen = new HashSet<string>();
+            for (int i = 0; i < t.Count; i++)
+            {
+                string group = t.Text(i, "group");
+                if (!GroupRx.IsMatch(group)) { t.Error(i, $"group '{group}' must look like f01"); continue; }
+                if (!seen.Add(group)) { t.Error(i, $"group {group} appears twice"); continue; }
+                if (!t.Ints(i, "layers", out var layers, required: true)) continue;
+
+                r.Data.partGroups.Add(new PartGroupRow
+                {
+                    group = group,
+                    description = t.Text(i, "description"),
+                    layers = layers,
+                    variants = files.CompleteVariants(ArtFileKind.SpeciesPart, group, layers, r.Issues)
                 });
             }
         }

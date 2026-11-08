@@ -181,5 +181,79 @@ namespace Starquill.Tests.Art
 
             StringAssert.StartsWith("palettes.csv line 2", Messages(r, ArtIssueLevel.Error).Single());
         }
+
+        private const string WeaponHeader = "item_type,description,hand_type,modular,layer_codes,hidden_layers,color_variance_layers\n";
+
+        [Test]
+        public void ModularWeapon_EachLayerKeepsItsOwnNumbers()
+        {
+            var src = Sources(
+                "weapons/w01/w01-164-0001.png", "weapons/w01/w01-164-0002.png",
+                "weapons/w01/w01-166-0001.png",
+                "weapons/w01/w01-166-0005.png");
+            src.WeaponsCsv = WeaponHeader + "w01,sword 1 hand,one_handed,y,164 166,,166\n";
+
+            var w = ArtTablesConverter.Convert(src).Data.weapons.Single();
+
+            Assert.IsTrue(w.modular);
+            CollectionAssert.AreEqual(new[] { 1, 2 }, w.variantsPerLayer[0].values);
+            CollectionAssert.AreEqual(new[] { 1, 5 }, w.variantsPerLayer[1].values);
+        }
+
+        [Test]
+        public void NonModularWeapon_SharesCompleteNumbersAcrossLayers()
+        {
+            var src = Sources(
+                "weapons/w09/w09-170-0001.png", "weapons/w09/w09-172-0001.png",
+                "weapons/w09/w09-170-0002.png");
+            src.WeaponsCsv = WeaponHeader + "w09,shield with detail,one_handed,n,170 172,,\n";
+
+            var r = ArtTablesConverter.Convert(src);
+            var w = r.Data.weapons.Single();
+
+            CollectionAssert.AreEqual(new[] { 1 }, w.variantsPerLayer[0].values);
+            CollectionAssert.AreEqual(new[] { 1 }, w.variantsPerLayer[1].values);
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Warning).Any(m => m.StartsWith("weapons/w09/w09-172-0002.png")));
+        }
+
+        [TestCase("w01,sword,three_handed,y,164,,", "hand_type")]
+        [TestCase("w01,sword,one_handed,maybe,164,,", "modular")]
+        [TestCase("x01,sword,one_handed,y,164,,", "item_type")]
+        public void Weapon_BadCells_AreErrors(string row, string column)
+        {
+            var src = Sources("weapons/w01/w01-164-0001.png");
+            src.WeaponsCsv = WeaponHeader + row + "\n";
+
+            var r = ArtTablesConverter.Convert(src);
+
+            StringAssert.Contains(column, Messages(r, ArtIssueLevel.Error).Single());
+            Assert.AreEqual(0, r.Data.weapons.Count);
+        }
+
+        [Test]
+        public void PartGroups_LayersAndCompleteVariants()
+        {
+            var src = Sources(
+                "species/h02/h02-0001-092.png", "species/h02/h02-0001-128.png",
+                "species/h02/h02-0003-092.png", "species/h02/h02-0003-128.png");
+            src.SpeciesPartsCsv = "group,description,layers\nh02,hair,92 128\n";
+
+            var g = ArtTablesConverter.Convert(src).Data.partGroups.Single();
+
+            Assert.AreEqual("h02", g.group);
+            CollectionAssert.AreEqual(new[] { 92, 128 }, g.layers);
+            CollectionAssert.AreEqual(new[] { 1, 3 }, g.variants);
+        }
+
+        [Test]
+        public void ZeroNumber_IsAnOrdinaryVariant()
+        {
+            var src = Sources("species/f01/f01-0000-084.png", "species/f01/f01-0001-084.png");
+            src.SpeciesPartsCsv = "group,description,layers\nf01,eyes,84\n";
+
+            var g = ArtTablesConverter.Convert(src).Data.partGroups.Single();
+
+            CollectionAssert.AreEqual(new[] { 0, 1 }, g.variants);
+        }
     }
 }
