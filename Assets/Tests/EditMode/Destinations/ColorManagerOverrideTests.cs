@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using Starquill.Core;
 using Starquill.Display;
+using Starquill.Tests.Fixtures;
 
 namespace Starquill.Tests.Destinations
 {
@@ -10,7 +11,7 @@ namespace Starquill.Tests.Destinations
         {
             var cm = new ColorManager();
             // two reds, one green
-            cm.LoadFromJson("{\"main\": [\"FF0000\", \"AA1111\", \"22CC44\"]}");
+            cm.LoadPalettes(ArtFixtures.Palette("main", "FF0000", "AA1111", "22CC44"));
             return cm;
         }
 

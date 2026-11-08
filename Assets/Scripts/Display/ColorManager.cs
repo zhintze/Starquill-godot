@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Starquill.Core;
+using Starquill.Data;
+using Starquill.Data.Art;
 using UnityEngine;
 
 namespace Starquill.Display
@@ -11,28 +13,22 @@ namespace Starquill.Display
         private readonly Dictionary<string, string> familyOverrides = new();
         private static readonly Color[] FallbackPalette = { Color.white };
 
-        public void LoadFromJson(string json)
+        public void LoadPalettes(IEnumerable<PaletteRow> rows)
         {
             palettes.Clear();
             familyIndex.Clear();
-            var dict = ParsePaletteJson(json);
-            foreach (var kvp in dict)
+            foreach (var row in rows)
             {
-                var colors = new Color[kvp.Value.Length];
-                for (int i = 0; i < kvp.Value.Length; i++)
-                    colors[i] = ParseHex(kvp.Value[i]);
-                palettes[kvp.Key] = colors;
+                var colors = new Color[row.hex.Length];
+                for (int i = 0; i < row.hex.Length; i++)
+                    colors[i] = ParseHex(row.hex[i]);
+                palettes[row.name] = colors;
             }
         }
 
-        public void LoadFromResources(string resourcePath = "Data/color_palettes")
+        public void LoadFromResources()
         {
-            var textAsset = Resources.Load<TextAsset>(resourcePath);
-            if (textAsset != null)
-                LoadFromJson(textAsset.text);
-            else
-                Debug.LogWarning($"ColorManager: Could not load {resourcePath}");
-
+            LoadPalettes(ArtTables.LoadFromResources().palettes);
             LoadOverridesFromResources();
         }
 
@@ -161,8 +157,8 @@ namespace Starquill.Display
             return true;
         }
 
-        /// Flat { "key": "value", ... } parser, same hand-rolled style as
-        /// ParsePaletteJson (no nesting, no escapes: hex keys + pool names).
+        /// Flat { "key": "value", ... } parser, hand-rolled
+        /// (no nesting, no escapes: hex keys + pool names).
         private static Dictionary<string, string> ParseStringMapJson(string json)
         {
             var result = new Dictionary<string, string>();
@@ -188,42 +184,6 @@ namespace Starquill.Display
                 if (valEnd < 0) break;
                 result[key] = json.Substring(valStart + 1, valEnd - valStart - 1);
                 i = valEnd + 1;
-            }
-            return result;
-        }
-
-        private static Dictionary<string, string[]> ParsePaletteJson(string json)
-        {
-            var result = new Dictionary<string, string[]>();
-            json = json.Trim();
-            if (!json.StartsWith("{")) return result;
-
-            json = json.Substring(1, json.Length - 2);
-            int i = 0;
-            while (i < json.Length)
-            {
-                int keyStart = json.IndexOf('"', i);
-                if (keyStart < 0) break;
-                int keyEnd = json.IndexOf('"', keyStart + 1);
-                string key = json.Substring(keyStart + 1, keyEnd - keyStart - 1);
-
-                int arrStart = json.IndexOf('[', keyEnd);
-                int arrEnd = json.IndexOf(']', arrStart);
-                string arrContent = json.Substring(arrStart + 1, arrEnd - arrStart - 1);
-
-                var values = new List<string>();
-                int j = 0;
-                while (j < arrContent.Length)
-                {
-                    int valStart = arrContent.IndexOf('"', j);
-                    if (valStart < 0) break;
-                    int valEnd = arrContent.IndexOf('"', valStart + 1);
-                    values.Add(arrContent.Substring(valStart + 1, valEnd - valStart - 1));
-                    j = valEnd + 1;
-                }
-
-                result[key] = values.ToArray();
-                i = arrEnd + 1;
             }
             return result;
         }

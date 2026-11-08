@@ -4,6 +4,7 @@ using Starquill.Core;
 using Starquill.Data;
 using Starquill.Destinations;
 using Starquill.Display;
+using Starquill.Tests.Fixtures;
 using Starquill.Equipment;
 using Starquill.Managers;
 using UnityEngine;
@@ -76,8 +77,7 @@ namespace Starquill.Tests.Destinations
             ]");
 
             var abilityTable = new AbilityTable();
-            var colors = new ColorManager();
-            colors.LoadFromJson(@"{""main"":[[""#FF0000"",""#00FF00"",""#0000FF""]]}");
+            var colors = ArtFixtures.RgbColors();
             return new EquipmentFactory(catalog, abilityTable, colors);
         }
 

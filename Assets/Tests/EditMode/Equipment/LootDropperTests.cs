@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Starquill.Core;
 using Starquill.Data;
 using Starquill.Display;
+using Starquill.Tests.Fixtures;
 using Starquill.Equipment;
 using UnityEngine;
 
@@ -40,8 +41,7 @@ namespace Starquill.Tests.Equipment
             ]");
 
             var abilityTable = new AbilityTable();
-            var colors = new ColorManager();
-            colors.LoadFromJson(@"{""main"":[[""#FF0000"",""#00FF00"",""#0000FF""]]}");
+            var colors = ArtFixtures.RgbColors();
 
             factory = new EquipmentFactory(catalog, abilityTable, colors);
             config = ScriptableObject.CreateInstance<EconomyConfig>();

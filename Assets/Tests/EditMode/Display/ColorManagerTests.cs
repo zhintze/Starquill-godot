@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using Starquill.Display;
+using Starquill.Tests.Fixtures;
 
 namespace Starquill.Tests.Display
 {
@@ -39,11 +40,10 @@ namespace Starquill.Tests.Display
         }
 
         [Test]
-        public void LoadPalettes_FromJson_ParsesCorrectly()
+        public void LoadPalettes_ParsesHex()
         {
-            string json = "{\"test_palette\":[\"FF0000\",\"00FF00\",\"0000FF\"]}";
             var manager = new ColorManager();
-            manager.LoadFromJson(json);
+            manager.LoadPalettes(ArtFixtures.Palette("test_palette", "FF0000", "00FF00", "0000FF"));
 
             Color[] palette = manager.GetPalette("test_palette");
             Assert.AreEqual(3, palette.Length);
@@ -55,9 +55,8 @@ namespace Starquill.Tests.Display
         [Test]
         public void GetPalette_Missing_ReturnsFallback()
         {
-            string json = "{\"main\":[\"FFFFFF\"]}";
             var manager = new ColorManager();
-            manager.LoadFromJson(json);
+            manager.LoadPalettes(ArtFixtures.Palette("main", "FFFFFF"));
 
             Color[] palette = manager.GetPalette("nonexistent");
             Assert.IsNotNull(palette);
@@ -67,9 +66,8 @@ namespace Starquill.Tests.Display
         [Test]
         public void GetRandomColor_ReturnsColorFromPalette()
         {
-            string json = "{\"single\":[\"FF0000\"]}";
             var manager = new ColorManager();
-            manager.LoadFromJson(json);
+            manager.LoadPalettes(ArtFixtures.Palette("single", "FF0000"));
 
             Color c = manager.GetRandomColor("single");
             Assert.AreEqual(1f, c.r, 0.01f);
@@ -79,7 +77,7 @@ namespace Starquill.Tests.Display
         public void ResolveSpeciesColorField_HexArray_ReturnsParsedColors()
         {
             var manager = new ColorManager();
-            manager.LoadFromJson("{\"main\":[\"FFFFFF\"]}");
+            manager.LoadPalettes(ArtFixtures.Palette("main", "FFFFFF"));
 
             string[] hexArray = { "FF0000", "00FF00" };
             Color[] colors = manager.ResolveColorField(hexArray);
@@ -91,7 +89,7 @@ namespace Starquill.Tests.Display
         public void ResolveSpeciesColorField_PaletteKeyword_ReturnsFromPalette()
         {
             var manager = new ColorManager();
-            manager.LoadFromJson("{\"human\":[\"3A1914\",\"45443C\"]}");
+            manager.LoadPalettes(ArtFixtures.Palette("human", "3A1914", "45443C"));
 
             string[] keyword = { "human" };
             Color[] colors = manager.ResolveColorField(keyword);
