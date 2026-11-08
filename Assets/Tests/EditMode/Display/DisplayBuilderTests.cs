@@ -40,10 +40,11 @@ namespace Starquill.Tests.Display
                 YScale = 1f
             };
 
-            registry.ModularPartCounts["f01"] = 10;
-            registry.ModularPartCounts["f02"] = 10;
-            registry.ModularPartCounts["f03"] = 10;
-            registry.ModularPartCounts["h01"] = 10;
+            var ten = System.Linq.Enumerable.Range(1, 10).ToArray();
+            registry.ModularPartVariants["f01"] = ten;
+            registry.ModularPartVariants["f02"] = ten;
+            registry.ModularPartVariants["f03"] = ten;
+            registry.ModularPartVariants["h01"] = ten;
 
             registry.SpeciesLayerMappings["f01"] = new[] { 84 };
             registry.SpeciesLayerMappings["f02"] = new[] { 86 };

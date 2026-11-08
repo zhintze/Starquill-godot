@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using Starquill.Core;
+using System.Linq;
+using Starquill.Data;
+using Starquill.Data.Art;
 using UnityEngine;
 
 namespace Starquill.Display
@@ -32,7 +34,7 @@ namespace Starquill.Display
     {
         public string ItemType;
         public string Description;
-        public int Amount;
+        public int[] Variants = System.Array.Empty<int>();
         public int[] LayerCodes;
         public int[] LayerColorVariance;
         public int[] HiddenLayers;
@@ -43,7 +45,8 @@ namespace Starquill.Display
     {
         public Dictionary<string, SpeciesDisplayData> Species { get; private set; } = new();
         public Dictionary<string, EquipmentDisplayData> Equipment { get; private set; } = new();
-        public Dictionary<string, int> ModularPartCounts { get; private set; } = new();
+        /// Part group -> variant numbers that exist on disk (gaps allowed).
+        public Dictionary<string, int[]> ModularPartVariants { get; private set; } = new();
         public Dictionary<string, int[]> SpeciesLayerMappings { get; private set; } = new();
         public ColorManager Colors { get; private set; } = new();
 
@@ -52,181 +55,78 @@ namespace Starquill.Display
 
         public void LoadAll()
         {
-            LoadSpecies();
-            LoadEquipment();
-            LoadWeapons();
-            LoadModularParts();
-            LoadLayerMappings();
-            Colors.LoadFromResources();
+            Load(ArtTables.LoadFromResources());
+            Colors.LoadOverridesFromResources();
         }
 
-        private void LoadSpecies()
-        {
-            var asset = Resources.Load<TextAsset>("Data/species");
-            if (asset == null) { Debug.LogWarning("DisplayDataRegistry: species.json not found"); return; }
-            ParseSpeciesJson(asset.text);
-        }
-
-        private void LoadEquipment()
-        {
-            var asset = Resources.Load<TextAsset>("Data/equipment");
-            if (asset == null) { Debug.LogWarning("DisplayDataRegistry: equipment.json not found"); return; }
-            ParseEquipmentJson(asset.text);
-        }
-
-        private void LoadWeapons()
-        {
-            var asset = Resources.Load<TextAsset>("Data/weapons");
-            if (asset == null) { Debug.LogWarning("DisplayDataRegistry: weapons.json not found"); return; }
-            ParseWeaponsJson(asset.text);
-        }
-
-        private void LoadModularParts()
-        {
-            var asset = Resources.Load<TextAsset>("Data/speciesModularParts");
-            if (asset == null) { Debug.LogWarning("DisplayDataRegistry: speciesModularParts.json not found"); return; }
-            ParseModularPartsJson(asset.text);
-        }
-
-        private void LoadLayerMappings()
-        {
-            SpeciesLayerMappings = new Dictionary<string, int[]>
-            {
-                { "f01", new[] { 84 } },
-                { "f02", new[] { 86 } },
-                { "f03", new[] { 85 } },
-                { "f04", new[] { 100 } },
-                { "f05", new[] { 122 } },
-                { "f06", new[] { 87 } },
-                { "h01", new[] { 92 } },
-                { "h02", new[] { 92, 128 } },
-                { "h03", new[] { 92, 154 } },
-                { "h04", new[] { 92, 128, 154 } },
-                { "d02", new[] { 86 } },
-                { "d04", new[] { 100 } },
-                { "d05", new[] { 122 } },
-                { "d06", new[] { 87 } },
-                { "g02", new[] { 86 } },
-                { "s01", new[] { 82 } },
-                { "s02", new[] { 84 } },
-                { "s03", new[] { 86 } },
-                { "s04", new[] { 87 } },
-            };
-        }
-
-        private void ParseSpeciesJson(string json)
+        public void Load(ArtTableData data)
         {
             Species.Clear();
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
-            {
-                var data = new SpeciesDisplayData();
-                data.Name = obj.GetString("name", "");
-                data.BackArm = obj.GetString("backArm", "");
-                data.Body = obj.GetString("body", "");
-                data.Ears = obj.GetString("ears", "");
-                data.Eyes = obj.GetString("eyes", "");
-                data.FacialDetail = obj.GetString("facialDetail", "");
-                data.FacialHair = obj.GetString("facialHair", "");
-                data.FrontArm = obj.GetString("frontArm", "");
-                data.Head = obj.GetString("head", "");
-                data.Legs = obj.GetString("legs", "");
-                data.Mouth = obj.GetString("mouth", "");
-                data.Nose = obj.GetString("nose", "");
-                data.Hair = obj.GetStringArray("hair");
-                data.OtherBodyParts = obj.GetStringArray("otherBodyParts");
-                data.ItemRestrictions = obj.GetStringArray("itemRestrictions");
-                data.SkinColor = obj.GetStringArray("skin_color");
-                data.HairColor = obj.GetStringArray("hair_color");
-                data.EyesColor = obj.GetStringArray("eyes_color");
-                data.FacialDetailColor = obj.GetStringArray("facialDetail_color");
-                data.XScale = obj.GetFloat("x_scale", 1f);
-                data.YScale = obj.GetFloat("y_scale", 1f);
-                data.HeadYOffset = obj.GetFloat("head_y_offset", 0.35f);
-                data.HeadZoom = obj.GetFloat("head_zoom", 0.5f);
-
-                var sets = obj.GetArray("skinVariance_sets");
-                if (sets != null)
-                {
-                    data.SkinVarianceSets = new SkinVarianceSet[sets.Count];
-                    for (int i = 0; i < sets.Count; i++)
-                    {
-                        var setObj = sets[i] as Dictionary<string, object>;
-                        if (setObj == null) continue;
-                        var vs = new SkinVarianceSet();
-                        vs.HexColors = SimpleJson.ToStringArray(setObj, "hex_colors");
-                        vs.Indices = SimpleJson.ToIntArray(setObj, "indices");
-                        data.SkinVarianceSets[i] = vs;
-                    }
-                }
-                else
-                {
-                    data.SkinVarianceSets = new SkinVarianceSet[0];
-                }
-
-                if (!string.IsNullOrEmpty(data.Name))
-                    Species[data.Name] = data;
-            }
-        }
-
-        private void ParseEquipmentJson(string json)
-        {
             Equipment.Clear();
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
-            {
-                var data = new EquipmentDisplayData();
-                data.ItemType = obj.GetString("item_type", "");
-                data.Description = obj.GetString("description", "");
-                data.Amount = obj.GetInt("amount", 1);
-                data.LayerCodes = obj.GetIntArray("layer_codes");
-                data.LayerColorVariance = obj.GetIntArray("layer_color_variance");
-                data.HiddenLayers = obj.GetIntArray("hidden_layers");
-                data.Modular = obj.GetBool("modular", false);
+            ModularPartVariants.Clear();
+            SpeciesLayerMappings = new Dictionary<string, int[]>();
+            Colors.LoadPalettes(data.palettes);
 
-                if (!string.IsNullOrEmpty(data.ItemType))
-                    Equipment[data.ItemType] = data;
+            var hexByPalette = data.palettes.ToDictionary(p => p.name, p => p.hex);
+
+            foreach (var g in data.partGroups)
+            {
+                SpeciesLayerMappings[g.group] = g.layers;
+                ModularPartVariants[g.group] = g.variants;
+            }
+
+            foreach (var e in data.equipment)
+            {
+                Equipment[e.itemType] = new EquipmentDisplayData
+                {
+                    ItemType = e.itemType, Description = e.description, Variants = e.variants,
+                    LayerCodes = e.layerCodes, LayerColorVariance = e.colorVarianceLayers,
+                    HiddenLayers = e.hiddenLayers, Modular = false
+                };
+            }
+
+            foreach (var w in data.weapons)
+            {
+                Equipment[w.itemType] = new EquipmentDisplayData
+                {
+                    ItemType = w.itemType, Description = w.description,
+                    LayerCodes = w.layerCodes, LayerColorVariance = w.colorVarianceLayers,
+                    HiddenLayers = w.hiddenLayers, Modular = w.modular
+                };
+            }
+
+            foreach (var s in data.species)
+            {
+                Species[s.name] = new SpeciesDisplayData
+                {
+                    Name = s.name,
+                    BackArm = s.backArm, Body = s.body, Ears = s.ears, Eyes = s.eyes,
+                    FacialDetail = s.facialDetail, FacialHair = s.facialHair, FrontArm = s.frontArm,
+                    Head = s.head, Legs = s.legs, Mouth = s.mouth, Nose = s.nose,
+                    Hair = s.hairGroups, OtherBodyParts = s.otherBodyParts, ItemRestrictions = s.itemRestrictions,
+                    SkinColor = PaletteField(s.skinPalette),
+                    HairColor = PaletteField(s.hairPalette),
+                    EyesColor = PaletteField(s.eyePalette),
+                    FacialDetailColor = PaletteField(s.facialDetailPalette),
+                    SkinVarianceSets = data.skinVariance
+                        .Where(v => v.species == s.name && hexByPalette.ContainsKey(v.palette))
+                        .Select(v => new SkinVarianceSet { HexColors = hexByPalette[v.palette], Indices = v.layers })
+                        .ToArray(),
+                    XScale = s.xScale, YScale = s.yScale, HeadYOffset = s.headYOffset, HeadZoom = s.headZoom
+                };
             }
         }
 
-        private void ParseWeaponsJson(string json)
-        {
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
-            {
-                var data = new EquipmentDisplayData();
-                data.ItemType = obj.GetString("item_type", "");
-                data.Description = obj.GetString("description", "");
-                data.Amount = 1; // Weapons use per-layer amounts, not a single amount
-                data.LayerCodes = obj.GetIntArray("layer_codes");
-                data.LayerColorVariance = obj.GetIntArray("layer_color_variance");
-                data.HiddenLayers = obj.GetIntArray("hidden_layers");
-                data.Modular = obj.GetBool("modular", false);
-
-                if (!string.IsNullOrEmpty(data.ItemType))
-                    Equipment[data.ItemType] = data;
-            }
-        }
-
-        private void ParseModularPartsJson(string json)
-        {
-            ModularPartCounts.Clear();
-            var list = SimpleJson.ParseArray(json);
-            foreach (var obj in list)
-            {
-                string type = obj.GetString("type", "");
-                int amount = obj.GetInt("amount", 1);
-                if (!string.IsNullOrEmpty(type))
-                    ModularPartCounts[type] = amount;
-            }
-        }
+        /// Blank = null, which SpeciesInstanceData reads as "use main".
+        private static string[] PaletteField(string palette) =>
+            string.IsNullOrEmpty(palette) ? null : new[] { palette };
 
         public string PickModularImageNum(string groupType, System.Random rng = null)
         {
-            if (!ModularPartCounts.TryGetValue(groupType, out int amount))
-                amount = 1;
-            int num = rng != null ? rng.Next(1, amount + 1) : Random.Range(1, amount + 1);
-            return num.ToString("D4");
+            if (!ModularPartVariants.TryGetValue(groupType, out var variants) || variants.Length == 0)
+                return "0001";
+            int i = rng != null ? rng.Next(variants.Length) : UnityEngine.Random.Range(0, variants.Length);
+            return variants[i].ToString("D4");
         }
     }
 }

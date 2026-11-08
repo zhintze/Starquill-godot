@@ -40,7 +40,8 @@ Done when (Phase A, this handoff):
 | 10 CSVs + RepoData test | done | RepoData test Skipped before the tables existed. `csv` dry run: 49 / 9 / 27 / 19 / 17 skin variance / 1905 palette rows. `dotnet test --filter Category=RepoData`: Passed, warnings exactly the 3 expected (2 `Artboard`, bridge troll `hd14` on species.csv line 23). Full run: Passed 73. Folder variant counts fe02 hd08 hd10 tr14 = 71 35 14 17 |
 | 11 Baker + asset + audit | done | Coplay `check_compile_errors`: none. Console: `Art tables baked: 49 equipment, 9 weapons, 27 species, 19 part groups; 0 error(s), 3 warning(s).` `ArtTables.asset` exists, `git status` silent (ignored). Check Images: 171 warnings in 6.1 s (5 empty, 166 same-pixel layers; 36 whole-variant duplicates, see Open flags). CSV edit and a new `hd01-0999-130.png` both rebaked (after the Editor window got focus) with no new warnings; the new PNG imported as Sprite, Single, 100 PPU, Bilinear, max 256, Uncompressed, no mipmaps. Test edits reverted |
 | 12 Palettes from ArtTables | done | Coplay `check_compile_errors`: none, after a probe confirmed the recompile (`ColorManager.LoadPalettes` present, `LoadFromJson` gone, `ArtFixtures` compiled). `grep LoadFromJson` leaves only AbilityTable/QuestZone/NameGenerator callers. Unity tests wait for CHECKPOINT B |
-| 13-17 | not started | |
+| 13 Registry reads ArtTables | done | New `DisplayDataRegistryTests` first failed to compile (`Load`, `ModularPartVariants`, `Variants` missing); after the change Coplay `check_compile_errors`: none, probe confirms `Load` present. `grep ModularPartCounts\|ParseSpeciesJson\|ParseEquipmentJson Assets`: nothing |
+| 14-17 | not started | |
 
 ## Decision map
 
@@ -66,7 +67,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 13 (display registry reads ArtTables; part picks use real variant numbers).
+Plan Task 14 (equipment catalog + factory use variant sets), then CHECKPOINT B.
 
 ## Open flags
 

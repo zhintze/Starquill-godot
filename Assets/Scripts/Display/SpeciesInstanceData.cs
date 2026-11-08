@@ -108,7 +108,7 @@ namespace Starquill.Display
                     int totalWeight = 0;
                     foreach (var h in species.Hair)
                     {
-                        registry.ModularPartCounts.TryGetValue(h, out int amt);
+                        int amt = registry.ModularPartVariants.TryGetValue(h, out var hv) ? hv.Length : 0;
                         totalWeight += System.Math.Max(amt, 1);
                     }
                     int roll = rng?.Next(totalWeight) ?? Random.Range(0, totalWeight);
@@ -116,7 +116,7 @@ namespace Starquill.Display
                     int cumulative = 0;
                     foreach (var h in species.Hair)
                     {
-                        registry.ModularPartCounts.TryGetValue(h, out int amt);
+                        int amt = registry.ModularPartVariants.TryGetValue(h, out var hv) ? hv.Length : 0;
                         cumulative += System.Math.Max(amt, 1);
                         if (roll < cumulative) { hairChoice = h; break; }
                     }
