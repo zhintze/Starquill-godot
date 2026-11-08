@@ -38,7 +38,8 @@ Done when (Phase A, this handoff):
 | 8 `0000` cleanup | done | Dry run classification matched the plan (copies f04 h01-h04, empty s04, unique f01 f02 f03 f05 f06 s01-s03). Deviation: s01-s03 renumbered to `0003`, not the plan's `0004` (those groups hold 0000-0002 only; next free is 0003). PNGs 4108 -> 4098; `grep -c -- -0000-` = 0; git shows only species PNG + .meta deletes/renames |
 | 9 Folder per type + paths | done; CHECKPOINT A green (Zach, 2026-11-08) | Move: 4098 PNGs before and after, 4098 `.meta`, 78 new folder `.meta`; only the 2 `Artboard` files at `find -maxdepth 2`. Coplay `check_compile_errors`: none. Test Runner: 550/552 passed; the 2 failures predate Phase A (see Open flags), Zach counted the checkpoint green without fixing them. Play-test: ExploreScene looks fine; Console has no `Sprite not found` |
 | 10 CSVs + RepoData test | done | RepoData test Skipped before the tables existed. `csv` dry run: 49 / 9 / 27 / 19 / 17 skin variance / 1905 palette rows. `dotnet test --filter Category=RepoData`: Passed, warnings exactly the 3 expected (2 `Artboard`, bridge troll `hd14` on species.csv line 23). Full run: Passed 73. Folder variant counts fe02 hd08 hd10 tr14 = 71 35 14 17 |
-| 11-17 | not started | |
+| 11 Baker + asset + audit | done | Coplay `check_compile_errors`: none. Console: `Art tables baked: 49 equipment, 9 weapons, 27 species, 19 part groups; 0 error(s), 3 warning(s).` `ArtTables.asset` exists, `git status` silent (ignored). Check Images: 171 warnings in 6.1 s (5 empty, 166 same-pixel layers; 36 whole-variant duplicates, see Open flags). CSV edit and a new `hd01-0999-130.png` both rebaked (after the Editor window got focus) with no new warnings; the new PNG imported as Sprite, Single, 100 PPU, Bilinear, max 256, Uncompressed, no mipmaps. Test edits reverted |
+| 12-17 | not started | |
 
 ## Decision map
 
@@ -64,7 +65,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 11 (ArtTables asset + Editor baker + import settings + image audit). Needs the Editor for verification.
+Plan Task 12 (palettes come from ArtTables).
 
 ## Open flags
 
@@ -72,3 +73,5 @@ Plan Task 11 (ArtTables asset + Editor baker + import settings + image audit). N
 - Two EditMode tests fail, both since 2026-07-02 and unrelated to Phase A; Zach said note them and do not fix now (2026-11-08). Expect 2 failures at checkpoints B and C:
   - `ColorFamilyTests.Classify_KnownColors(0.82, 0.71, 0.55, Brown)` gets Pastel: the Pastel rule from `144845e1` catches this tan; the test case is stale (the same file lists `#C7A68B` tan as Pastel).
   - `TavernPresenterTests.RecruitLabel_ShowsPrice` expects `RECRUIT · 2.5Kg`, gets `RECRUIT · 2.5K`: `TavernPresenter.RecruitLabel` drops the `g` every other price label shows (real UI bug).
+- Check Images (Task 11): 5 empty images (`ar02-0010-034`, one each in tr14, s04, w05, w06) and 36 whole-variant duplicates (every layer identical), e.g. tr03 0107-0111 = 0007-0011, f02 0211-0220 = 0052-0061, h01 x5. Three of them are `0000` drawings renumbered in Task 8, which only compared `0000` with `0001`: f02 0221 = 0055, f05 0067 = 0002, f06 0054 = 0002. Art left untouched (artist decides). Full list: rerun Tools > Art Tables > Check Images.
+- The auto-rebake runs on the Editor's next update, which on this Linux box waits until the Editor window has focus. A scripted `AssetDatabase.Refresh` from Coplay queues it but does not run it; call `ArtTablesBaker.Bake()` directly when scripting.
