@@ -30,7 +30,8 @@ Done when (Phase A, this handoff):
 | Plan | done | `fde82549` |
 | 1 CsvTable + test project | done | `dotnet test tools/ArtTablesTests`: Passed 7, Failed 0 (failing build first: `Starquill.Data` not found). Deviation: `.gitignore` also got `!tools/ArtTablesTests/ArtTablesTests.csproj`, because Unity's `*.csproj` rule ignored it |
 | 2 ArtFileName | done | `dotnet test tools/ArtTablesTests`: Passed 20, Failed 0 (7 + 13; failing build first: `ArtFileName` not found) |
-| 3-17 | not started | |
+| 3 ArtTableData + ArtCells | done | `dotnet test tools/ArtTablesTests`: Passed 41, Failed 0 (failing build first: `ArtCells` not found) |
+| 4-17 | not started | |
 
 ## Decision map
 
@@ -56,7 +57,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 3 (art table data model and cell parsing).
+Plan Task 4 (converter part 1: file index, palettes, equipment).
 
 ## Open flags
 
