@@ -25,6 +25,7 @@ Asset[Ss]tore[Tt]ools/
 *.mdb.meta
 
 # Builds
+/Builds/
 *.apk
 *.aab
 *.unitypackage
