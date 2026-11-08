@@ -28,7 +28,8 @@ Done when (Phase A, this handoff):
 |---|---|---|
 | Design | done, approved by Zach | `bd340964`, fixes in `fde82549` |
 | Plan | done | `fde82549` |
-| 1-17 | not started | |
+| 1 CsvTable + test project | done | `dotnet test tools/ArtTablesTests`: Passed 7, Failed 0 (failing build first: `Starquill.Data` not found). Deviation: `.gitignore` also got `!tools/ArtTablesTests/ArtTablesTests.csproj`, because Unity's `*.csproj` rule ignored it |
+| 2-17 | not started | |
 
 ## Decision map
 
@@ -54,7 +55,7 @@ Design-level decisions D1-D12 are in the design doc's Decisions table; they are 
 
 ## Next step
 
-Plan Task 1 (headless test project + `CsvTable`): everything in Tasks 1-7 is pure C# testable with `dotnet test`, so it can run before Zach is needed.
+Plan Task 2 (art file name parser).
 
 ## Open flags
 

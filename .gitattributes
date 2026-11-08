@@ -1,0 +1,2 @@
+# Excel on Windows saves CRLF; normalize so one edited row is one changed line.
+*.csv text eol=lf

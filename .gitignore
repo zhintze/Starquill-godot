@@ -68,3 +68,13 @@ Assets/Resources/BillingMode.json.meta
 
 # Coplay MCP local package
 Packages/Coplay/
+
+# Headless art table tests (dotnet build output)
+tools/ArtTablesTests/bin/
+tools/ArtTablesTests/obj/
+# Unity ignores *.csproj above; this one is hand-written, keep it
+!tools/ArtTablesTests/ArtTablesTests.csproj
+
+# Generated from Assets/Data/ArtTables/*.csv by the Editor baker
+/Assets/Resources/ArtTables.asset
+/Assets/Resources/ArtTables.asset.meta
