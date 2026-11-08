@@ -255,5 +255,84 @@ namespace Starquill.Tests.Art
 
             CollectionAssert.AreEqual(new[] { 0, 1 }, g.variants);
         }
+
+        private static ArtSources SpeciesSources(string speciesRow, string skinVarianceRows = "")
+        {
+            var src = Sources(
+                "species/body/0001-016.png", "species/body/0001-037.png",
+                "species/f01/f01-0001-084.png", "species/h01/h01-0001-092.png",
+                "equipment/hd12/hd12-0001-130.png");
+            src.EquipmentCsv += "hd12,tight facemask,130,,\n";
+            src.SpeciesPartsCsv = "group,description,layers\nf01,eyes,84\nh01,hair,92\n";
+            src.PalettesCsv = "palette,hex\nmain,#FFFFFF\nhuman,#3A1914\nskin_naga,#F3D9C2\n";
+            src.SpeciesCsv += speciesRow + "\n";
+            src.SkinVarianceCsv += skinVarianceRows;
+            return src;
+        }
+
+        // name,x_scale,y_scale,head_y_offset,head_zoom,back_arm,legs,body,head,front_arm,eyes,nose,mouth,ears,facial_hair,facial_detail,hair_groups,other_body_parts,skin_palette,hair_palette,eye_palette,facial_detail_palette,item_restrictions
+        private const string Human = "human,1,1,0.35,0.5,0001-016,0001-037,,,,f01,,,,,,h01,,human,,,,hd12";
+
+        [Test]
+        public void Species_ParsesRow()
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human));
+
+            Assert.IsFalse(r.HasErrors, string.Join("\n", Messages(r, ArtIssueLevel.Error)));
+            var s = r.Data.species.Single();
+            Assert.AreEqual("human", s.name);
+            Assert.AreEqual("0001-016", s.backArm);
+            Assert.AreEqual("f01", s.eyes);
+            CollectionAssert.AreEqual(new[] { "h01" }, s.hairGroups);
+            Assert.AreEqual("human", s.skinPalette);
+            Assert.AreEqual("", s.hairPalette);
+            CollectionAssert.AreEqual(new[] { "hd12" }, s.itemRestrictions);
+            Assert.AreEqual(0.35f, s.headYOffset, 1e-6f);
+        }
+
+        [Test]
+        public void Species_FullPartToken_IsAccepted()
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human.Replace(",f01,", ",f01-0001-084,")));
+            Assert.IsFalse(r.HasErrors, string.Join("\n", Messages(r, ArtIssueLevel.Error)));
+        }
+
+        [TestCase("0009-016", ArtIssueLevel.Warning)]   // body image missing
+        [TestCase("f09", ArtIssueLevel.Error)]          // unknown part group
+        [TestCase("eyes!", ArtIssueLevel.Error)]        // not a token
+        public void Species_BadPartToken(string token, ArtIssueLevel level)
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human.Replace(",0001-016,", "," + token + ",")));
+            Assert.IsTrue(Messages(r, level).Any(m => m.StartsWith("species.csv line 2") && m.Contains("back_arm")));
+        }
+
+        [Test]
+        public void Species_UnknownPalette_IsError_UnknownRestriction_IsWarning()
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human.Replace(",human,,,,hd12", ",skin_troll,,,,hd14")));
+
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Error).Any(m => m.Contains("skin_troll")));
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Warning).Any(m => m.Contains("hd14")));
+        }
+
+        [Test]
+        public void Species_BlankSkinPalette_IsError()
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human.Replace(",human,,,,hd12", ",,,,,hd12")));
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Error).Any(m => m.Contains("skin_palette")));
+        }
+
+        [Test]
+        public void SkinVariance_RowsReferenceSpeciesAndPalette()
+        {
+            var src = SpeciesSources(Human, "human,4 37,skin_naga\nelf,37,skin_naga\nhuman,37,nope\n");
+
+            var r = ArtTablesConverter.Convert(src);
+
+            var v = r.Data.skinVariance.Single();
+            Assert.AreEqual("human", v.species);
+            CollectionAssert.AreEqual(new[] { 4, 37 }, v.layers);
+            Assert.AreEqual(2, Messages(r, ArtIssueLevel.Error).Count(m => m.StartsWith("species_skin_variance.csv")));
+        }
     }
 }

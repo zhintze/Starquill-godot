@@ -29,6 +29,8 @@ namespace Starquill.Data.Art
             ConvertEquipment(Open(src.EquipmentCsv, EquipmentFile, r), files, r);
             ConvertWeapons(Open(src.WeaponsCsv, WeaponsFile, r), files, r);
             ConvertPartGroups(Open(src.SpeciesPartsCsv, SpeciesPartsFile, r), files, r);
+            ConvertSpecies(Open(src.SpeciesCsv, SpeciesFile, r), files, r);
+            ConvertSkinVariance(Open(src.SkinVarianceCsv, SkinVarianceFile, r), r);
 
             files.ReportUnusedFolders(r.Issues);
             return r;
@@ -143,6 +145,121 @@ namespace Starquill.Data.Art
                     layers = layers,
                     variants = files.CompleteVariants(ArtFileKind.SpeciesPart, group, layers, r.Issues)
                 });
+            }
+        }
+
+        private static readonly Regex BodyTokenRx = new Regex(@"^\d{4}-\d{3}$");
+        private static readonly Regex FullPartTokenRx = new Regex(@"^([a-z]\d{2})-(\d{4})-(\d{3})$");
+
+        private static readonly string[] PartColumns =
+            { "back_arm", "legs", "body", "head", "front_arm", "eyes", "nose", "mouth", "ears", "facial_hair", "facial_detail" };
+
+        private static void ConvertSpecies(Table t, FileIndex files, ArtBakeResult r)
+        {
+            var required = new List<string> { "name", "x_scale", "y_scale", "head_y_offset", "head_zoom" };
+            required.AddRange(PartColumns);
+            required.AddRange(new[] { "hair_groups", "other_body_parts", "skin_palette", "hair_palette", "eye_palette", "facial_detail_palette", "item_restrictions" });
+            if (t == null || !t.Require(required.ToArray())) return;
+
+            var groups = new HashSet<string>(r.Data.partGroups.Select(g => g.group));
+            var palettes = new HashSet<string>(r.Data.palettes.Select(p => p.name));
+            var itemTypes = new HashSet<string>(r.Data.equipment.Select(e => e.itemType).Concat(r.Data.weapons.Select(w => w.itemType)));
+            var seen = new HashSet<string>();
+
+            for (int i = 0; i < t.Count; i++)
+            {
+                string name = t.Text(i, "name");
+                if (name.Length == 0) { t.Error(i, "name is blank"); continue; }
+                if (!seen.Add(name)) { t.Error(i, $"species {name} appears twice"); continue; }
+
+                bool ok = true;
+                float x = 1, y = 1, headY = 0.35f, zoom = 0.5f;
+                ok &= Float(t, i, "x_scale", 1f, ref x);
+                ok &= Float(t, i, "y_scale", 1f, ref y);
+                ok &= Float(t, i, "head_y_offset", 0.35f, ref headY);
+                ok &= Float(t, i, "head_zoom", 0.5f, ref zoom);
+
+                foreach (var column in PartColumns)
+                    ok &= CheckPartToken(t, i, column, t.Text(i, column), files, groups);
+                var hair = ArtCells.Strings(t.Text(i, "hair_groups"));
+                foreach (var g in hair) ok &= CheckPartToken(t, i, "hair_groups", g, files, groups);
+                var other = ArtCells.Strings(t.Text(i, "other_body_parts"));
+                foreach (var g in other) ok &= CheckPartToken(t, i, "other_body_parts", g, files, groups);
+
+                string skin = t.Text(i, "skin_palette");
+                if (skin.Length == 0) { t.Error(i, "skin_palette is blank"); ok = false; }
+                foreach (var column in new[] { "skin_palette", "hair_palette", "eye_palette", "facial_detail_palette" })
+                {
+                    string p = t.Text(i, column);
+                    if (p.Length > 0 && !palettes.Contains(p)) { t.Error(i, $"{column} '{p}' is not in palettes.csv"); ok = false; }
+                }
+
+                var restrictions = ArtCells.Strings(t.Text(i, "item_restrictions"));
+                foreach (var type in restrictions)
+                    if (!itemTypes.Contains(type)) t.Warning(i, $"item_restrictions lists {type}, which is not an item type");
+
+                if (!ok) continue;
+                r.Data.species.Add(new SpeciesRow
+                {
+                    name = name, xScale = x, yScale = y, headYOffset = headY, headZoom = zoom,
+                    backArm = t.Text(i, "back_arm"), legs = t.Text(i, "legs"), body = t.Text(i, "body"),
+                    head = t.Text(i, "head"), frontArm = t.Text(i, "front_arm"),
+                    eyes = t.Text(i, "eyes"), nose = t.Text(i, "nose"), mouth = t.Text(i, "mouth"),
+                    ears = t.Text(i, "ears"), facialHair = t.Text(i, "facial_hair"), facialDetail = t.Text(i, "facial_detail"),
+                    hairGroups = hair, otherBodyParts = other, itemRestrictions = restrictions,
+                    skinPalette = skin, hairPalette = t.Text(i, "hair_palette"),
+                    eyePalette = t.Text(i, "eye_palette"), facialDetailPalette = t.Text(i, "facial_detail_palette")
+                });
+            }
+        }
+
+        private static bool Float(Table t, int i, string column, float fallback, ref float value)
+        {
+            if (ArtCells.TryFloat(t.Text(i, column), fallback, out value)) return true;
+            t.Error(i, $"{column} '{t.Text(i, column)}' must be a number like 1.1");
+            return false;
+        }
+
+        /// Blank, a body token (0001-016), a part group (f01) or a full part
+        /// token (f01-0001-084). Unknown shapes and groups are errors; a
+        /// missing body or part image is a warning (the part draws nothing).
+        private static bool CheckPartToken(Table t, int i, string column, string token, FileIndex files, HashSet<string> groups)
+        {
+            if (token.Length == 0) return true;
+            if (BodyTokenRx.IsMatch(token))
+            {
+                if (!files.BodyTokens.Contains(token)) t.Warning(i, $"{column} {token}: image species/body/{token}.png not found");
+                return true;
+            }
+            if (GroupRx.IsMatch(token))
+            {
+                if (groups.Contains(token)) return true;
+                t.Error(i, $"{column} {token} is not a group in species_parts.csv");
+                return false;
+            }
+            var m = FullPartTokenRx.Match(token);
+            if (m.Success)
+            {
+                if (!files.HasPart(m.Groups[1].Value, int.Parse(m.Groups[2].Value), int.Parse(m.Groups[3].Value)))
+                    t.Warning(i, $"{column} {token}: image species/{m.Groups[1].Value}/{token}.png not found");
+                return true;
+            }
+            t.Error(i, $"{column} '{token}' must look like 0001-016, f01 or f01-0001-084");
+            return false;
+        }
+
+        private static void ConvertSkinVariance(Table t, ArtBakeResult r)
+        {
+            if (t == null || !t.Require("species", "layers", "palette")) return;
+            var species = new HashSet<string>(r.Data.species.Select(s => s.name));
+            var palettes = new HashSet<string>(r.Data.palettes.Select(p => p.name));
+            for (int i = 0; i < t.Count; i++)
+            {
+                string name = t.Text(i, "species"), palette = t.Text(i, "palette");
+                if (!species.Contains(name)) { t.Error(i, $"species '{name}' is not in species.csv"); continue; }
+                if (!palettes.Contains(palette)) { t.Error(i, $"palette '{palette}' is not in palettes.csv"); continue; }
+                if (!t.Ints(i, "layers", out var layers, required: true)) continue;
+                r.Data.skinVariance.Add(new SkinVarianceRow { species = name, layers = layers, palette = palette });
             }
         }
 
