@@ -20,7 +20,7 @@ Phase B is large, so it lands in stages, each ending at a checkpoint where Zach 
 |---|---|---|
 | **B1 Foundation** | assembly, disk sprites, data load from a repo folder, character model + roller, render + PNG export, minimal Bulk screen (Count, Randomize All, Equip Random, Lock, reroll, Export), repo picker, Warnings list, scene + Linux/Windows builds | **full (Tasks 1-13, CHECKPOINT D)** |
 | B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **full (Tasks 14-23, CHECKPOINT E)**, written after CHECKPOINT D |
-| B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | outline |
+| B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | tasks 24-31 (P17: code in commits) |
 | B4 Presets | Character, Cast, Random settings JSON | outline |
 | B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | outline |
 | B6 Release | GitHub Release packaging, artist README | outline |
@@ -4415,16 +4415,42 @@ git commit -m "docs: Character Studio B2 done, CHECKPOINT E pending"
 
 ---
 
-## Stages B3-B6 (outline; detailed after the previous checkpoint)
+## Stage B3: Single screen (Tasks 24-31)
 
-B2 is detailed above (Tasks 14-23).
+Written 2026-11-08 during the run-through Zach asked for ("continue all the way through the tasks until complete, then a linux build for full testing of all remaining checkpoints"). Checkpoints E-G are tested together on the final Linux build.
 
+### Decisions made while planning B3 (2026-11-08)
 
-**B3 Single screen**
-- Large preview (~800 px), background toggle checkerboard / white / dark; Body and Gear tabs.
-- Body: species, skin color (palette + free picker), hair group/variant/color, eye color, each face part variant picker with None where allowed (uses `ModularImageNums` and the B1 hide flags).
-- Gear: per slot (Head, Torso, Arms, Legs, Feet, Main Hand, Off Hand, Misc 1-4): item type dropdown filtered by slot prefix, variant thumbnail grid from `CatalogEntry.Variants` / `WeaponEntry.VariantsPerLayer` (thumbnails rendered through a small `CharacterDisplay` or the item PNG itself), base and second-color pickers (main palette swatches + HSV picker), modular weapon part pickers, row reroll, Lock, ✕; note when an item's `HiddenLayers` hides a body part.
-- Undo/redo (Ctrl+Z / Ctrl+Y): snapshot stack of `StudioCharacter` (deep copy), every change and reroll pushes one.
+| # | Decision | Why |
+|---|---|---|
+| P17 | From B3 on, the plan lists tasks, files, decisions, tests and checks; the code lives in the commits, not copied here. | Planner and executor are the same session in one run; a second copy of every file in this doc only drifts. |
+| P18 | The Single screen opens over the Bulk screen (Bulk stays alive, hidden). A card's **Edit** opens it on that same character; **Back** redraws the card. | No second copy of the character to sync; Bulk keeps its state. |
+| P19 | Variant thumbnails: the item or body part drawn alone through the game's `DisplayBuilder` at 200 px, cropped to the drawing. Items in their current colors, parts in the current skin/hair/eye color. | Shows what the artist will get, layers and tints included; one PNG per layer would not. |
+| P20 | **None** is offered for hair, facial hair and facial detail; every other part always has a variant (the species draws it). | Matches the game data: only those can be absent. |
+| P21 | A gear row has its own **Lock**: locked slots survive Reroll gear, Equip Random and the other rows' rerolls. The card Lock (whole character) is unchanged. | Design §2 Gear "row reroll, Lock". |
+| P22 | Color picker: palette swatches (species palette for skin, hair, eyes; the main palette for gear) plus H/S/V sliders and a hex field, applied live. One undo step per opening of the picker. | Design §2 "game swatches + free picker"; one step keeps undo usable. |
+| P23 | Undo/redo: a snapshot of the whole character before each change, up to 100, Ctrl+Z and Ctrl+Y (Ctrl+Shift+Z too), ignored while typing in a text field. History lasts for one visit to the Single screen. | Design §2 "Undo/redo across all changes including rerolls". |
+| P24 | A row reroll picks any item type of that slot by the type weights (the slot chance is ignored: the artist asked for an item). Rerolling the off hand while the main hand is two-handed empties the main hand, and the reverse. | Same rule as P10: the explicit action wins. |
+
+### Tasks
+
+| Task | Files | Tests |
+|---|---|---|
+| 24 Character copy, slot locks, edit history | `StudioCharacter.cs` (`Clone`, `CopyFrom`, `LockedSlots`, `StudioItem.Clone`), new `EditHistory.cs` | `StudioCharacterCopyTests`, `EditHistoryTests` |
+| 25 Row reroll, locked slots, hand rule | `StudioRoller.cs` (`RollSlot`, `RollGear` keeps locked slots, `ResolveHands`) | `StudioRollerSlotTests` |
+| 26 Body parts model | new `BodyParts.cs` (editable part groups per species, hair groups, parts an item hides) | `BodyPartsTests` |
+| 27 Thumbnails | new `ThumbnailRenderer.cs` | `ThumbnailRendererTests` |
+| 28 Color and variant pickers | new `UI/ColorPickerView.cs`, `UI/VariantPickerView.cs` | none (UI) |
+| 29 Single screen | new `UI/SingleScreen.cs`, `UI/KeyShortcuts.cs` | none (UI) |
+| 30 Edit button on cards | `UI/BulkScreen.cs` | none (UI) |
+| 31 Editor smoke run | none | executor play run: Edit opens Single, Body/Gear edits redraw, undo/redo, Back updates the card, export this |
+
+Each task: write tests, compile-check (Refresh, `check_compile_errors`, reflection probe), implement, compile-check, commit. Tests run in Zach's Test Runner at the end.
+
+## Stages B4-B6 (outline; detailed after the previous stage)
+
+B2 (Tasks 14-23) and B3 (Tasks 24-31) are detailed above.
+
 
 **B4 Presets** (JSON in `presets/` next to the exe; Editor: `Library/CharacterStudio/presets/`)
 - Character: species, body choices (part numbers, hide flags, colors as hex), gear per slot (type, number, layer variants, hex colors).
