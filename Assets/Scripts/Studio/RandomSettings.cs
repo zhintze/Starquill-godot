@@ -35,5 +35,15 @@ namespace Starquill.Studio
                 default: return MiscEach;
             }
         }
+
+        /// Back to the defaults above; every weight back to 1.
+        public void Reset()
+        {
+            var d = new RandomSettings();
+            Head = d.Head; Torso = d.Torso; Arms = d.Arms; Legs = d.Legs; Feet = d.Feet;
+            MainHand = d.MainHand; OffHand = d.OffHand; MiscEach = d.MiscEach;
+            FacialHair = d.FacialHair; FacialDetail = d.FacialDetail;
+            TypeWeights.Clear();
+        }
     }
 }

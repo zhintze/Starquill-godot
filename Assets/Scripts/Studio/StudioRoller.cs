@@ -24,6 +24,9 @@ namespace Starquill.Studio
 
         public StudioRoller(StudioData data) { this.data = data; }
 
+        private HashSet<string> Restricted(string species) =>
+            new HashSet<string>(data.Registry.Species[species].ItemRestrictions ?? Array.Empty<string>());
+
         public StudioCharacter RollCharacter(IReadOnlyList<string> species, RandomSettings s, Random rng)
         {
             var c = new StudioCharacter { SpeciesName = species[rng.Next(species.Count)] };
@@ -45,7 +48,7 @@ namespace Starquill.Studio
         public void RollGear(StudioCharacter c, RandomSettings s, Random rng)
         {
             c.Gear.Clear();
-            var restricted = new HashSet<string>(data.Registry.Species[c.SpeciesName].ItemRestrictions ?? Array.Empty<string>());
+            var restricted = Restricted(c.SpeciesName);
 
             foreach (var (slot, prefix) in ArmorSlots)
                 if (rng.NextDouble() < s.ChanceFor(slot))
@@ -70,6 +73,36 @@ namespace Starquill.Studio
             foreach (var slot in MiscSlots)
                 if (rng.NextDouble() < s.MiscEach)
                     PutArmor(c, slot, "mc", restricted, s, rng);
+        }
+
+        /// New species and a new body for it; gear the new species can wear stays.
+        public void ChangeSpecies(StudioCharacter c, string species, RandomSettings s, Random rng)
+        {
+            c.SpeciesName = species;
+            RollBody(c, s, rng);
+            var restricted = Restricted(species);
+            foreach (var slot in c.Gear.Keys.ToList())
+                if (restricted.Contains(c.Gear[slot].ItemType)) c.Gear.Remove(slot);
+        }
+
+        /// This exact variant with random colors; null for an unknown type.
+        /// A modular weapon uses the number on every layer.
+        public StudioItem MakeItem(string itemType, int itemNum, Random rng)
+        {
+            var weapon = data.Catalog.GetWeapon(itemType);
+            var entry = weapon == null ? data.Catalog.GetEntry(itemType) : null;
+            if (weapon == null && entry == null) return null;
+
+            var item = new StudioItem
+            {
+                ItemType = itemType,
+                ItemNum = itemNum,
+                BaseColor = data.Registry.Colors.GetRandomColor("main", rng)
+            };
+            if (weapon != null && weapon.Modular)
+                item.LayerVariants = weapon.LayerCodes.Select(_ => itemNum).ToArray();
+            AddVariance(item, weapon != null ? weapon.LayerColorVariance : entry.LayerColorVariance, rng);
+            return item;
         }
 
         private void PutArmor(StudioCharacter c, EquipmentSlot slot, string prefix, HashSet<string> restricted, RandomSettings s, Random rng)
@@ -114,7 +147,7 @@ namespace Starquill.Studio
                 item.VarianceColors[layer] = data.Registry.Colors.GetRandomColor("main", rng);
         }
 
-        private static bool IsShield(string itemType) => itemType == "w08" || itemType == "w09";
+        internal static bool IsShield(string itemType) => itemType == "w08" || itemType == "w09";
 
         private static T PickWeighted<T>(List<T> items, RandomSettings s, Random rng) where T : class
         {
