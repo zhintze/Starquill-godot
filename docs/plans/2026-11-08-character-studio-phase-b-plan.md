@@ -22,7 +22,7 @@ Phase B is large, so it lands in stages, each ending at a checkpoint where Zach 
 | B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **full (Tasks 14-23, CHECKPOINT E)**, written after CHECKPOINT D |
 | B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | tasks 24-31 (P17: code in commits) |
 | B4 Presets | Character, Cast, Random settings JSON | tasks 32-35 (P17) |
-| B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | outline |
+| B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | tasks 36-40 (P17) |
 | B6 Release | GitHub Release packaging, artist README | outline |
 
 Each later stage gets its detailed tasks after the previous checkpoint, written against the real code: B2 (Tasks 14-23) was written after CHECKPOINT D.
@@ -4467,17 +4467,33 @@ Each task: write tests, compile-check (Refresh, `check_compile_errors`, reflecti
 | 34 Preset UI | new `UI/PresetView.cs`; `StudioApp` (`LoadWarnings`), `WarningsView`, `BulkScreen` (Presets button, cast load), `SettingsWindow`, `SingleScreen` | none (UI) |
 | 35 Editor smoke run | none | save and load each kind; a hand-edited preset with a missing variant shows a warning |
 
-## Stages B5-B6 (outline; detailed after the previous stage)
+## Stage B5: Library panel (Tasks 36-40)
 
-B2 (Tasks 14-23), B3 (Tasks 24-31) and B4 (Tasks 32-35) are detailed above.
+### Decisions made while planning B5 (2026-11-08)
 
+| # | Decision | Why |
+|---|---|---|
+| P29 | One generic row form per table (item types `equipment.csv`, weapons `weapons.csv`, species `species.csv`, part groups `species_parts.csv`): one text field per column with a plain-words label; **New** suggests the next free code and can start from a copy of an existing row. Codes cannot be renamed after creation (remove and re-add). | Design §2 Library panel; renaming would also mean renaming the folder and every image. |
+| P30 | Before writing, the studio runs the Phase A converter on the edited table: a change that adds an **error** is refused and the errors are shown in the form; warnings (art not drawn yet) are allowed. | One set of rules (D2, D6); the artist sees the problem before pushing. |
+| P31 | Each table remembers the text it read. If the file changed on disk since (another program, a git pull), Save asks **Overwrite** or **Reload** (drop my edit). A file that cannot be written (Excel holds it) gives "close <file> in Excel", and the form stays open with the edit. | Design §2 Error handling. |
+| P32 | **Remove** deletes the row, the type's folder with every PNG and `.meta`, and the folder's `.meta`, after a confirm that says git can bring them back. | Design §2 "git is the undo". |
+| P33 | **Rescan** writes a `.meta` for every folder and PNG under `Assets/Resources/Images` that has none: PNGs copy an existing art `.meta` (the game's sprite settings) with a new GUID; folders get the standard folder `.meta`. Then it reloads the tables. **Check images** runs `ArtImageAudit` (empty and duplicate images) on demand. | D8; art `.meta` files differ only in their GUID. |
+| P34 | Closing the Library after a change reloads the art and rebuilds the Bulk screen from a snapshot of the grid (through the cast preset path, P27), so characters survive and anything removed shows as a warning. | Reuses the preset load checks; no character points at removed art. |
 
-**B5 Library panel**
-- New item type (slot → next free code suggestion, description, layer codes, hidden layers, second-color layers): appends a CSV row via `CsvTable` (one-line diff), creates `equipment/<type>/` or `weapons/<type>/`, **Open folder**. Same pattern for species (`species.csv`) and part groups (`species_parts.csv`).
-- Edit any row in a form; Remove deletes the folder with `.meta` files and the row (git is the undo).
-- Rescan: `StudioData.Reload()`, `ImageResolver.ClearCache()`, rebuild dropdowns; optional `ArtImageAudit.Run` (6 s) behind a **Check images** button.
-- `.meta` writer for new PNGs: template with the game's sprite import settings and a new GUID (`Guid.NewGuid().ToString("N")`).
-- File safety: CSV locked by Excel → "close equipment.csv in Excel", edit kept in memory; CSV changed on disk since the last Rescan → ask before overwriting.
+### Tasks
+
+| Task | Files | Tests |
+|---|---|---|
+| 36 Table files and library edits | new `TableFile.cs`, `LibraryEditor.cs` (next code, save new/edited row, remove, validation, changed-on-disk) | `LibraryEditorTests` (temporary repo copy) |
+| 37 `.meta` writer | new `MetaWriter.cs` | `MetaWriterTests` |
+| 38 Library screen | new `UI/LibraryScreen.cs`, `UI/RowFormView.cs`, `StudioUi.Confirm`; `StudioApp.ReloadArt`, image check results in Warnings; Bulk **Library** button, cast restore after reload | none (UI) |
+| 39 Editor smoke run | none | add a test item type in a temporary repo copy through the UI; refused bad layer codes; remove it |
+| 40 Linux build for all remaining checkpoints | none | build result and size |
+
+## Stage B6 (outline)
+
+B2 (Tasks 14-23), B3 (24-31), B4 (32-35) and B5 (36-40) are detailed above.
+
 
 **B6 Release**
 - Zip the Windows build; GitHub Release (`gh release create studio-v0.1 ...`) after Zach approves; the `.exe` is never committed (D10).
