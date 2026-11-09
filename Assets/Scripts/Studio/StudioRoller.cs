@@ -44,9 +44,10 @@ namespace Starquill.Studio
             c.HideFacialDetail = !string.IsNullOrEmpty(species.FacialDetail) && rng.NextDouble() >= s.FacialDetail;
         }
 
-        /// Strips and rerolls gear only.
+        /// Strips and rerolls gear only; slots in c.LockedSlots keep their item (P21).
         public void RollGear(StudioCharacter c, RandomSettings s, Random rng)
         {
+            var kept = c.LockedSlots.Where(c.Gear.ContainsKey).ToDictionary(slot => slot, slot => c.Gear[slot]);
             c.Gear.Clear();
             var restricted = Restricted(c.SpeciesName);
 
@@ -73,6 +74,57 @@ namespace Starquill.Studio
             foreach (var slot in MiscSlots)
                 if (rng.NextDouble() < s.MiscEach)
                     PutArmor(c, slot, "mc", restricted, s, rng);
+
+            foreach (var kv in kept) c.Gear[kv.Key] = kv.Value;
+            ResolveHands(c, kept.ContainsKey(EquipmentSlot.OffHand) ? EquipmentSlot.OffHand : EquipmentSlot.MainHand);
+        }
+
+        /// A new random item for one slot, any type of that slot by the type
+        /// weights (the slot chance is ignored, P24). Empty when no type can be picked.
+        public void RollSlot(StudioCharacter c, EquipmentSlot slot, RandomSettings s, Random rng)
+        {
+            var restricted = Restricted(c.SpeciesName);
+            StudioItem item = null;
+            if (slot == EquipmentSlot.MainHand || slot == EquipmentSlot.OffHand)
+            {
+                var w = PickWeighted(data.Catalog.WeaponEntries.Where(e => !restricted.Contains(e.ItemType)
+                    && (slot == EquipmentSlot.MainHand ? !IsShield(e.ItemType) : e.HandType == "one_handed")).ToList(), s, rng);
+                if (w != null) item = MakeWeapon(w, rng);
+            }
+            else
+            {
+                var entry = PickWeighted(data.Catalog.GetByPrefix(PrefixFor(slot)).Where(e => !restricted.Contains(e.ItemType)).ToList(), s, rng);
+                if (entry != null) item = MakeArmor(entry, rng);
+            }
+            if (item == null) c.Gear.Remove(slot);
+            else c.Gear[slot] = item;
+            ResolveHands(c, slot);
+        }
+
+        /// A two-handed main hand and an off-hand item cannot both stay: the
+        /// one in winner stays, the other goes.
+        public void ResolveHands(StudioCharacter c, EquipmentSlot winner)
+        {
+            if (c.Gear.TryGetValue(EquipmentSlot.MainHand, out var main) && main != null
+                && data.Catalog.GetWeapon(main.ItemType)?.HandType == "two_handed"
+                && c.Gear.ContainsKey(EquipmentSlot.OffHand))
+                c.Gear.Remove(winner == EquipmentSlot.OffHand ? EquipmentSlot.MainHand : EquipmentSlot.OffHand);
+        }
+
+        /// Item type prefix for an armor or misc slot; null for the hands.
+        public static string PrefixFor(EquipmentSlot slot)
+        {
+            switch (slot)
+            {
+                case EquipmentSlot.Head: return "hd";
+                case EquipmentSlot.Torso: return "tr";
+                case EquipmentSlot.Arms: return "ar";
+                case EquipmentSlot.Legs: return "lg";
+                case EquipmentSlot.Feet: return "fe";
+                case EquipmentSlot.MainHand:
+                case EquipmentSlot.OffHand: return null;
+                default: return "mc";
+            }
         }
 
         /// New species and a new body for it; gear the new species can wear stays.
