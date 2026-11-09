@@ -18,12 +18,12 @@ Phase B is large, so it lands in stages, each ending at a checkpoint where Zach 
 
 | Stage | Delivers | Detail here |
 |---|---|---|
-| **B1 Foundation** | assembly, disk sprites, data load from a repo folder, character model + roller, render + PNG export, minimal Bulk screen (Count, Randomize All, Equip Random, Lock, reroll, Export), repo picker, Warnings list, scene + Linux/Windows builds | **full (Tasks 1-13, CHECKPOINT D)** |
-| B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **full (Tasks 14-23, CHECKPOINT E)**, written after CHECKPOINT D |
-| B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | tasks 24-31 (P17: code in commits) |
-| B4 Presets | Character, Cast, Random settings JSON | tasks 32-35 (P17) |
-| B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | tasks 36-40 (P17) |
-| B6 Release | GitHub Release packaging, artist README | outline |
+| **B1 Foundation** | assembly, disk sprites, data load from a repo folder, character model + roller, render + PNG export, minimal Bulk screen (Count, Randomize All, Equip Random, Lock, reroll, Export), repo picker, Warnings list, scene + Linux/Windows builds | **done**, CHECKPOINT D green |
+| B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **done** (Tasks 14-23) |
+| B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | **done** (Tasks 24-31) |
+| B4 Presets | Character, Cast, Random settings JSON | **done** (Tasks 32-35) |
+| B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | **done** (Tasks 36-40); checkpoints E-G tried by Zach 2026-11-08, feedback applied (P22b, P22c) |
+| B6 Release | GitHub Release packaging, artist README | outline; next, after Zach's Windows test |
 
 Each later stage gets its detailed tasks after the previous checkpoint, written against the real code: B2 (Tasks 14-23) was written after CHECKPOINT D.
 

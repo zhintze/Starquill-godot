@@ -1,5 +1,7 @@
 # Character Studio Implementation Plan
 
+> **Update 2026-11-08:** `species_skin_variance.csv` and the `species.csv` `other_body_parts` column produced here were replaced by `species_extra_parts.csv` (`2026-11-08-species-extra-parts-plan.md`). This plan is kept as history.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Make CSV tables the only stored copy of the art rules (baked into a Unity asset at build time, variant numbers read from the files on disk), then build the Character Studio app on top of them.

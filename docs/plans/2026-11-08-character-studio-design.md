@@ -49,6 +49,16 @@ Two parts:
 | D11 | Export scale is chosen per export (1×/2×/4×/8× of the 200px canvas). |
 | D12 | Out of scope: `abilities.json`, `names.json`, `quest_zones.json` (game data, stay JSON); `color_family_overrides.json` (owned by `tools/color_pools.py`). |
 
+## Changes since approval (2026-11-08)
+
+Built in Phase A and Phase B Stages B1-B5. Decisions made while building are P1-P34 in `2026-11-08-character-studio-phase-b-plan.md` and E1-E5 in `2026-11-08-species-extra-parts-plan.md`. Where they differ from this document:
+
+- **Species extra parts** are a seventh concept with their own table, `species_extra_parts.csv`, keyed by part (not layer): extras such as wings, tails, horns and the angel halo, plus species parts with their own palette. Replaces `species.csv` `other_body_parts` and `species_skin_variance.csv`.
+- **Colors are palette only** (Zach): every picker offers just the palette the game rolls from (species skin palette; hair/eye/facial detail palette or `main`; `main` for gear; a part's own palette). No free color picker.
+- **Dropdowns** are the studio's own `PickList`: tall, fast-scrolling, searchable.
+- **Species size** stays off in the game and the studio (`docs/roadmap.md` backlog).
+- The Library panel also edits `species_extra_parts.csv` (key = species + part).
+
 ## 1. Art data
 
 ### Folder layout (game and studio)
@@ -60,7 +70,7 @@ Assets/Resources/Images/
   species/body/<NNNN>-<LLL>.png                          static body parts, e.g. 0001-016.png
   species/<group>/<group>-<NNNN>-<LLL>.png               face/hair/skeleton groups, e.g. species/f01/f01-0001-084.png
 Assets/Data/ArtTables/
-  equipment.csv  weapons.csv  species.csv  species_parts.csv  species_skin_variance.csv  palettes.csv
+  equipment.csv  weapons.csv  species.csv  species_parts.csv  species_extra_parts.csv  palettes.csv
 ```
 
 `ImageToken` path builders gain the folder segment. A one-time script moves every PNG together with its `.meta` (GUIDs survive).
@@ -73,9 +83,9 @@ One row per thing. Lists inside a cell are space-separated (`10 134 130`). Blank
 |---|---|
 | `equipment.csv` | `item_type, description, layer_codes, hidden_layers, color_variance_layers` (slot comes from the prefix via `EquipmentCatalog.SlotForPrefix`; not stored twice) |
 | `weapons.csv` | `item_type, description, hand_type, modular, layer_codes, hidden_layers, color_variance_layers` |
-| `species.csv` | `name, x_scale, y_scale, head_y_offset, head_zoom, back_arm, legs, body, head, front_arm, eyes, nose, mouth, ears, facial_hair, facial_detail, hair_groups, other_body_parts, skin_palette, hair_palette, eye_palette, facial_detail_palette, item_restrictions` |
+| `species.csv` | `name, x_scale, y_scale, head_y_offset, head_zoom, back_arm, legs, body, head, front_arm, eyes, nose, mouth, ears, facial_hair, facial_detail, hair_groups, skin_palette, hair_palette, eye_palette, facial_detail_palette, item_restrictions` |
 | `species_parts.csv` | `group, layers, description` (replaces the hardcoded `LoadLayerMappings`) |
-| `species_skin_variance.csv` | `species, layers, palette` (replaces nested `skinVariance_sets`) |
+| `species_extra_parts.csv` | `species, part, color, color_group, chance` (2026-11-08; replaced `other_body_parts` and the first port's `species_skin_variance.csv`, which kept Godot's layer-keyed `skinVariance_sets`; see `2026-11-08-species-extra-parts-plan.md`) |
 | `palettes.csv` | `palette, hex` (one row per color; row order is palette order). Species with inline skin hex lists get named palettes (e.g. `skin_naga`). |
 
 ### Converter and bake

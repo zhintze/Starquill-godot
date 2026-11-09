@@ -11,10 +11,11 @@ The original Godot open-world RPG is archived in `godot-archive/` and is not par
 ## Key Documents
 
 - `docs/implemented-systems.md`: authoritative reference for what is built and how it works
-- `docs/sprint-review.md`: historical sprint log (Sprints 1-11, balance pass, Destinations D1)
+- `docs/sprint-review.md`: historical sprint log (Sprints 1-11, balance pass, Destinations D1, art tables + Character Studio)
 - `docs/roadmap.md`: remaining MVP work (Sprint 12) + post-MVP backlog
 - `docs/plans/`: dated design and implementation plan docs, one pair per sprint
 - `docs/plans/2026-02-12-idle-rpg-clicker-design.md`: original master design (equipment/affix sections superseded; see banner in that file)
+- `docs/plans/2026-11-08-character-studio-progress.md`: Character Studio status and resume notes (design, plans and decisions P1-P34 are linked from it); `docs/plans/2026-11-08-species-extra-parts-plan.md`: the extra parts table
 
 ## Architecture
 
@@ -24,6 +25,8 @@ The original Godot open-world RPG is archived in `godot-archive/` and is not par
 Core → Data → Combat / Characters / Equipment / Exploration / Display → Managers
 UI (references Managers and below)
 ```
+
+`Starquill.Studio` (Character Studio) references Core, Data, Display, Equipment and TextMeshPro only, never UI/Managers/GameManager, and builds for the Editor and Windows/Linux standalone only (never Android).
 
 Rules:
 - Equipment references Display (ColorManager); Characters references Equipment + Display (factory chain)
@@ -48,11 +51,11 @@ The old affix system (`AffixTable`, `RolledAffix`, `affixes.json`, `StatMods`) i
 
 ### Paper Doll Display
 
-`DisplayBuilder` 4-stage pipeline → `CharacterDisplay` RenderTexture compositing (400x400, bilinear). Layer codes and color variance come from the art tables (`Assets/Data/ArtTables/`); palettes from `ColorManager`.
+`DisplayBuilder` 4-stage pipeline → `CharacterDisplay` RenderTexture compositing (400x400, bilinear). Layer codes, palettes and species extra parts (`species_extra_parts.csv`: wings, tails, horns, own-colored parts, keyed by part) come from the art tables (`Assets/Data/ArtTables/`); palettes via `ColorManager`. Appearance is rebuilt from the character id, so a change to random roll order in `SpeciesInstanceData.CreateFrom` changes saved characters' looks.
 
 ### Data Loading
 
-Art data (equipment, weapons, species, part groups, palettes) is CSV in `Assets/Data/ArtTables/`, baked into `Resources/ArtTables.asset`; never add art counts by hand (variant numbers come from the image files). Game data (abilities, names, quest zones, color family overrides) stays JSON in `Assets/Resources/Data/`, parsed via MiniJSON + SimpleJson helpers in the Core assembly. `dotnet test tools/ArtTablesTests` runs the art table tests headless. ScriptableObject configs in `Assets/Data/Config/` (DefaultEconomyConfig, DefaultAdvantageMatrix). `EconomyConfig` holds all tuning knobs and economy formulas (EnemyHP, GoldPerKill, UpgradeCost, OfflineGold).
+Art data (equipment, weapons, species, part groups, species extra parts, palettes) is CSV in `Assets/Data/ArtTables/`, baked into `Resources/ArtTables.asset`; never add art counts by hand (variant numbers come from the image files). Game data (abilities, names, quest zones, color family overrides) stays JSON in `Assets/Resources/Data/`, parsed via MiniJSON + SimpleJson helpers in the Core assembly. `dotnet test tools/ArtTablesTests` runs the art table tests headless. ScriptableObject configs in `Assets/Data/Config/` (DefaultEconomyConfig, DefaultAdvantageMatrix). `EconomyConfig` holds all tuning knobs and economy formulas (EnemyHP, GoldPerKill, UpgradeCost, OfflineGold).
 
 ## Development Workflow
 
@@ -66,11 +69,13 @@ Tests **cannot run headless on this machine** (Arch Linux batch-mode issue). Use
 - **Tools > Build Explore Scene**: rebuilds the ExploreScene hierarchy from scratch (`Assets/Editor/ExploreSceneBuilder.cs`). Always save the scene after.
 - `Assets/Editor/ClearSave.cs`: wipes save data
 - **Tools > Art Tables > Bake Now / Check Images**: rebuild `ArtTables.asset` from the CSVs; report empty and duplicate images
+- **Tools > Character Studio > Create Scene / Build Linux / Build Windows**: the artist's studio app (`Assets/Scripts/Studio/`, assembly `Starquill.Studio`, Editor + desktop only); builds go to `Builds/CharacterStudio/` (gitignored)
 
 ### Scenes
 
 - `Assets/Scenes/ExploreScene.unity`: the game (starting scene in build settings)
 - `Assets/Scenes/DisplayTest.unity`: paper-doll rendering harness
+- `Assets/Scenes/CharacterStudio.unity`: the Character Studio (not in the game's build list); its layout needs a 16:9 Game view
 
 ### Coplay MCP
 
@@ -94,3 +99,5 @@ Unity Editor integration via Coplay MCP (file-based RPC through `Temp/Coplay/MCP
 - `ArtTables.asset` is generated; if it is missing or stale, Tools > Art Tables > Bake Now. A scripted `AssetDatabase.Refresh` only queues the auto-bake (it runs once the Editor window has focus); call `ArtTablesBaker.Bake()` directly when scripting
 - Art PNGs: one folder per type (`equipment/hd01/`, `species/f01/`, `species/body/`); move files with their `.meta`
 - `com.unity.purchasing` is on the 5.x line (the 4.x line produced package errors in Unity 6); it is installed but unused until Shop/IAP work begins
+- Builds started through Coplay `execute_script` outlive its 60 s timeout; read the result line from `~/.config/unity3d/Editor.log`. A modal dialog (save modified scenes, the IAP "install Microsoft GDK?" prompt when the Editor is on Windows) blocks the Editor and every Coplay call until answered; the Character Studio build menu avoids both
+- Unity sometimes flags an open scene as modified with no real change; check by saving a copy (`SaveScene(scene, path, saveAsCopy: true)`) and diffing it with the file before discarding or saving

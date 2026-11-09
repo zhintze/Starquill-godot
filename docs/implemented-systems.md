@@ -1,7 +1,7 @@
 # Starquill: Implemented Systems Reference
 
-**Last updated:** 2026-07-02
-**Status:** Authoritative. This document describes what is actually built on branch `unity-idle-clicker` through Sprint 11, the balance pass, and Destinations Sprint D1 (last confirmed Test Runner pass: 344 green 2026-07-01; ~460 test methods on disk since, D1 batch confirmed green 2026-07-02). Where it conflicts with `docs/plans/2026-02-12-idle-rpg-clicker-design.md`, this document wins.
+**Last updated:** 2026-11-08
+**Status:** Authoritative. This document describes what is actually built on branch `unity-idle-clicker` through Sprint 11, the balance pass, Destinations Sprint D1, the art tables (Godot art data ported to CSV) and the Character Studio art tool (last confirmed Test Runner pass: 590/592 on 2026-11-08, the 2 known old failures; the studio and extra-parts tests added since were run by direct method calls, not yet in the Test Runner). Where it conflicts with `docs/plans/2026-02-12-idle-rpg-clicker-design.md`, this document wins.
 
 ---
 
@@ -9,7 +9,7 @@
 
 Unity 6 (6000.3.8f1) mobile idle RPG clicker, portrait 1080x1920, IL2CPP. A party of 4 paper-doll characters auto-battles enemy waves. The player taps Verbs (pooled party abilities) to exploit a dual-triangle advantage system. Loot drops feed a collection/equip loop that visibly changes characters.
 
-**Assemblies:** `Core → Data → Combat / Characters / Equipment / Exploration / Display / Quests / Destinations → Managers`, with `UI` and `Services` alongside. Tests in `EditModeTests` (556 test cases in the Test Runner, 2026-11-08). `Assets/Scripts/Data/Art/` (art tables: CSV reader, file name parser, converter, repo reader) is pure C# with no `UnityEngine`; it and `Assets/Tests/EditMode/Art/` also compile headless in `tools/ArtTablesTests` (`dotnet test`). The empty `Starquill.Economy` assembly was removed 2026-07-01; economy code lives in Data (`EconomyConfig`) and Equipment (`SellCalculator`, `PityTracker`).
+**Assemblies:** `Core → Data → Combat / Characters / Equipment / Exploration / Display / Quests / Destinations → Managers`, with `UI` and `Services` alongside. `Starquill.Studio` (Character Studio; Editor + Windows/Linux standalone only, never in the Android game) sits on Core, Data, Display, Equipment. Tests in `EditModeTests` (592 test cases at the 2026-11-08 Test Runner pass). `Assets/Scripts/Data/Art/` (art tables: CSV reader, file name parser, converter, repo reader) is pure C# with no `UnityEngine`; it and `Assets/Tests/EditMode/Art/` also compile headless in `tools/ArtTablesTests` (`dotnet test`). The empty `Starquill.Economy` assembly was removed 2026-07-01; economy code lives in Data (`EconomyConfig`) and Equipment (`SellCalculator`, `PityTracker`).
 
 ---
 
@@ -97,7 +97,7 @@ Every `EquipmentInstance` carries:
 
 ## 6. Display (`Assets/Scripts/Display/`)
 
-Paper doll rendering: `DisplayBuilder` 4-stage pipeline (species parts → equipment layers → color application → composite order) → `CharacterDisplay` RenderTexture compositing at 400x400 bilinear. `ColorManager` loads palettes from the art tables. `ImageResolver`/`ImageToken` map layer codes to sprites. `CharacterPortraitRenderer` for UI portraits.
+Paper doll rendering: `DisplayBuilder` 4-stage pipeline (species parts → equipment layers → color application → composite order) → `CharacterDisplay` RenderTexture compositing at 400x400 bilinear. `ColorManager` loads palettes from the art tables. `ImageResolver`/`ImageToken` map layer codes to sprites; `ImageResolver` takes an `ISpriteSource` (the game: `Resources`; the studio: PNGs from a repo clone) and records missing paths. `CharacterDisplay.Initialize(resolver, size)` renders at any multiple of the 200 px art canvas. `CharacterPortraitRenderer` for UI portraits. Each species part draws in one color: its `species_extra_parts.csv` rule if it has one (skin, hair, eyes, facial detail or a rolled palette color, shared within a color group), else skin (hair/eyes/facial detail fields: their own color). Extras come from that table and can be optional (`chance`). `SpeciesInstanceData` holds `PartColors` (by color group) and `OmittedExtras`.
 
 **Art tables (2026-11-08).** The art rules live only in six CSVs in `Assets/Data/ArtTables/`: `equipment.csv`, `weapons.csv`, `species.csv`, `species_parts.csv` (part group layers, formerly hardcoded), `species_extra_parts.csv`, `palettes.csv` (one row per color). `species_extra_parts.csv` (2026-11-08, replaced `species.csv` `other_body_parts` and `species_skin_variance.csv`) has one row per species extra drawing (wings, tails, horns, halo) and per species part with its own color: `species,part,color,color_group,chance`; `color` is skin, hair, eyes, facial_detail or a palette; rows sharing a `color_group` roll one color; `chance` (extras only, blank = always) makes an extra optional. Rules are keyed by part, not layer; random rolls keep the old order so characters rebuilt from their id keep their look (plan `docs/plans/2026-11-08-species-extra-parts-plan.md`). `ArtTablesBaker` (Editor) converts them plus a scan of `Assets/Resources/Images` into `Assets/Resources/ArtTables.asset` (generated, gitignored) on Editor load if missing, whenever a CSV or art PNG changes (runs on the Editor's next update, which on Linux waits for window focus), before every build (table errors fail the build), and from Tools > Art Tables > Bake Now. `DisplayDataRegistry`, `EquipmentCatalog` and `ColorManager` read the asset. Variant numbers come from the files on disk, gaps allowed; nothing stores a count. A variant counts only when every layer of its item or part group has a file; the bake warns about missing layers, misnamed files, folders with no row and rows with no images. Images sit in one folder per type: `equipment/hd01/hd01-0001-130.png`, `weapons/w01/w01-164-0001.png`, `species/body/0001-016.png`, `species/f01/f01-0001-084.png`. `ArtImageAudit` (Tools > Art Tables > Check Images, and before builds) reports empty images and pixel-identical layers within a type.
 
@@ -146,6 +146,19 @@ Design system: `UiTheme` tokens (type floor 28px, touch >= 120px) + `UiFactory` 
 - `ArtTablesBaker` (Tools > Art Tables): Bake Now, Check Images. New PNGs under `Assets/Resources/Images/` get the paper-doll sprite import settings automatically (Sprite, 100 PPU, Bilinear, max 256, uncompressed, no mipmaps); this replaced the manual `SpriteImportFixer`.
 - `tools/ArtTablesTests`: `dotnet test tools/ArtTablesTests` runs the art table tests headless; `--filter Category=RepoData` converts the real CSVs and images.
 - `tools/migrate_art_tables.py`: one-time migration (run 2026-11-08): `0000` part cleanup, one folder per type, art JSON to CSV. Kept for history; its `csv` step refuses to run now that the JSON is gone.
+- `tools/migrate_species_extra_parts.py`: one-time migration (run 2026-11-08) of `other_body_parts` + `species_skin_variance.csv` into `species_extra_parts.csv`. Kept for history.
+- `CharacterStudioTools` (Tools > Character Studio): Create Scene, Build Linux, Build Windows (`Builds/CharacterStudio/`, gitignored; Mono, LZ4HC, 1600x900 window). It switches player settings for the build and restores them, puts the Editor back on its previous platform, and reopens an open scene whose unsaved flag is false so the build does not stop on a save prompt.
+
+## 10b. Character Studio (`Assets/Scripts/Studio/`, `Assets/Scenes/CharacterStudio.unity`)
+
+A standalone app for the artist (Windows `.exe`, Linux build; not in the game's scene list) that rolls and edits characters with the game's own classes and exports transparent PNGs. Design: `docs/plans/2026-11-08-character-studio-design.md`; plans and decisions P1-P34: `docs/plans/2026-11-08-character-studio-phase-b-plan.md`; status: `docs/plans/2026-11-08-character-studio-progress.md`.
+
+- **Data:** reads the artist's repo clone directly (`StudioData`: the art table converter in memory, no baked asset; `DiskSpriteSource`: PNGs with the game's sprite settings). The studio render matches the game's render (`StudioPixelMatchTests`).
+- **Bulk screen:** grid of 8-64 random characters (`StudioRoller`, Godot randomizer chances and per-type weights), species window, search (`ItemSearch`: token, file name, description word) and forced items (`ForcedItems`, Godot slot limits, hand rules), per-card species/skin/Select/Lock/Reroll/Edit, random settings window, export of selected or all at 1x-8x with trim (`StudioRenderer`, `PixelOps`, `ExportNamer`).
+- **Single screen:** large preview with backgrounds, Body tab (species, palette colors, hair group/variant, face parts and extras with thumbnails, part color groups, optional extras) and Gear tab (type, variant thumbnails, colors, weapon parts, row reroll and lock), undo/redo (`EditHistory`).
+- **Presets:** character, cast and random settings as readable JSON in `presets/` (`Presets`, `PresetStore`); loading checks every choice against the current art and lists problems in Warnings.
+- **Library panel:** row forms for item types, weapons, species, part groups and extra parts (`LibraryEditor`: the converter refuses changes that add errors; asks before overwriting a file changed on disk), remove with its folder, Rescan with `.meta` writing (`MetaWriter`), Check images.
+- **UI:** code-built uGUI (`StudioUi`), palette-only color pickers, `PickList` dropdowns (tall, fast scrolling, searchable).
 
 ---
 

@@ -1,6 +1,6 @@
 # Starquill MVP Roadmap
 
-**Last updated:** 2026-07-02
+**Last updated:** 2026-11-08
 **Baseline:** Sprints 1-11, the balance pass, and Destinations Sprint D1 are complete (last confirmed Test Runner: 344 green 2026-07-01, D1 batch green 2026-07-02; ~460 test methods on disk). History: `docs/sprint-review.md`. Current state: `docs/implemented-systems.md`. Completed design/plan docs are archived in `docs/plans/archive/`.
 
 Each sprint follows spec-driven development: design doc → implementation plan → task-by-task execution with tests → review. Plan docs live in `docs/plans/` with the `YYYY-MM-DD-<topic>-design.md` / `-plan.md` naming convention.
@@ -20,6 +20,15 @@ Each sprint follows spec-driven development: design doc → implementation plan 
 | Destinations D1 | Keys (color/type/class, fusion, selling), key-targeted timed dungeon rushes, pouch/fusion UI, run HUD + completion sheet; color families iterated to 11 with the Pastel pool + `tools/color_pools.py` manual override pipeline |
 
 Details per sprint: `docs/sprint-review.md` and `docs/plans/archive/`.
+
+## Art pipeline and Character Studio (2026-11-08)
+
+| Work | Delivered |
+|---|---|
+| Art tables | Godot art data ported to six CSVs (`Assets/Data/ArtTables/`), baked into `ArtTables.asset`; variant numbers come from the images on disk; per-type image folders |
+| Species extra parts | `species_extra_parts.csv`: wings, tails, horns, halo and own-colored species parts, keyed by part; optional extras; fixes rhinofolk horns and white palette rolls |
+| Character Studio B1-B5 | Bulk and Single screens, presets, Library panel, PNG export; Linux and Windows builds |
+| **Next** | Zach tests the Windows build; then B6: GitHub Release of the Windows build and the artist README |
 
 ---
 

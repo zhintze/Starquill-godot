@@ -1,6 +1,6 @@
 # Character Studio Progress and Resume Notes
 
-2026-11-08 (updated 2026-11-08: Stage B1 done, CHECKPOINT D green; running B2-B5 without stops; one Linux build at the end for all remaining checkpoints) · Read this before resuming.
+2026-11-08 (updated 2026-11-08: B1-B5 built; checkpoints E-G tried by Zach and his feedback applied; species extra parts table added; Windows zip made for Zach's Win11 test) · Read this before resuming.
 
 Mandate: "creating a standalone character selector/generator ... that exports generated and curated characters into standalone separate images with a transparent background as a png file for use in promotional content", built on "our current object oriented system", with the art rules "only storing in one place to avoid [them getting unsynced]" and "human readable AND make for easy git diffs" (Zach, 2026-11-08).
 
@@ -109,13 +109,9 @@ Design-level decisions D1-D12 are in the design doc; planning decisions P1-P7 ar
 
 ## Next step
 
-**CHECKPOINTS E-G (Zach), one pass on the Linux build and the Test Runner:**
-- Test Runner > EditMode > Run All: expect about 673 tests (592 at CHECKPOINT D plus 81 new studio cases), all green except the 2 known old failures. The studio cases were also called directly by reflection on 2026-11-08: 116 pass (pixel match needs the runner).
-- Run `Builds/CharacterStudio/Linux/StarquillCharacters.x86_64` (first launch: repo picker, paste `/home/keroppi/Development/Starquill`). In the Editor instead, set the Game view to a 16:9 size first (the game's portrait view squeezes the studio).
-- **E, Bulk:** Species window (uncheck some; Randomize All uses only checked; restart remembers); search `hd01-0001`, a pasted file name, `hat`; chips and their x; Equip Random keeps forced items; `w04` then `w08` shows a red two-handed message; card species and Skin; Settings sliders (Head 0 gives no hats); Select a few, Export selected; type an export folder.
-- **F, Single:** Edit on a card; Body tab (species, skin, hair group/variant/color, eye color, face parts with thumbnails, None for facial hair/detail); Gear tab (type dropdowns, variant thumbnails, colors, weapon parts, row Reroll, row Lock survives Reroll gear, x); Ctrl+Z / Ctrl+Y; backgrounds; Export this; Back updates the card.
-- **G, Presets and Library:** save and load a cast, a character, random settings; hand-edit a preset to a missing variant and see the warning. Library: New item type (suggested code, slot, start from a copy), a bad layer code is refused, Rescan after dropping a PNG in the new folder writes its .meta, Back keeps the grid, Remove (confirm). Try it on a scratch branch or `git restore` afterwards: the Library edits this repo's CSVs and image folders.
-- Then: B6 (GitHub Release of the Windows build, artist README) needs Zach's go; the Windows build was not rebuilt in this run.
+1. Zach tests `Builds/CharacterStudio/StarquillCharacters-Windows.zip` on Windows 11 (copied to the ExtraFAT drive). The Starquill folder the studio opens there must have these commits (push `unity-idle-clicker` and pull, or copy the folder).
+2. Zach runs the Test Runner (EditMode, Run All): the studio and extra-parts tests added since CHECKPOINT D have only been run by direct method calls.
+3. Then B6: GitHub Release of the Windows build (needs Zach's go) and the artist README (`docs/character-studio-readme.md`).
 
 ## Open flags
 

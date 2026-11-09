@@ -547,3 +547,14 @@ Design: `docs/plans/2026-07-01-mobile-ui-redesign-design.md` · Plan: `...-plan.
 - Presentation: two-line rows (name / race · level) with bare-headed roster-style head portraits; TavernRecruitSheet shows the full-body doll (also bare-headed), total stats, verbs, price. Bare-head is display-only via shared `EquipmentDisplayMapper` (deduped five pre-existing equipment-mapping call sites)
 - Purchase is atomic; recruits auto-fill an open active-party slot (BuildPartyFromRoster + RebuildVerbPool) or bench when the party is full; roster cap 20 refuses without charging
 - Smoke-found fixes: stale recruit sheet closing on rotation, idempotent BottomSheet.Close, honest refusal reasons
+
+## Art Tables + Character Studio
+
+**Date:** 2026-11-08 | **Status:** Phase A and Stages B1-B5 implemented; CHECKPOINT D green (Test Runner 590/592, the 2 known old failures); checkpoints E-G tried by Zach on the Linux build, feedback applied. B6 (release) pending.
+
+- **Art tables (Phase A):** the Godot-era art data (equipment, weapons, species, part groups, palettes) became CSVs in `Assets/Data/ArtTables/` baked into `Resources/ArtTables.asset`; images moved to one folder per type; variant counts replaced by the numbers found on disk; warnings for missing layers, misnamed files, empty and duplicate images. `tools/ArtTablesTests` runs the converter tests headless.
+- **Character Studio (B1-B5):** a standalone Unity app (`Starquill.Studio`) for the artist built on the game's own `CharacterDisplay`/`DisplayBuilder`: Bulk screen ported from the Godot randomizer (species, search, forced items, settings), Single screen editor with undo/redo, presets, Library panel that edits the CSVs with converter checks, transparent PNG export. Linux and Windows builds via Tools > Character Studio.
+- **Species extra parts:** Godot's layer-keyed `SkinVariance` rules (ported as `species_skin_variance.csv`) and `other_body_parts` became `species_extra_parts.csv`, keyed by part, with optional extras. Random rolls kept their order, so saved characters keep their rolls. Visible fixes: rhinofolk horns follow their palette (the port had dropped that rule); a rolled white is drawn white (the old "white = no rule" shortcut drew skin), so goblin/ogre tusks are white. The angel halo got its own palette.
+- **Smaller fixes found on the way:** bridge troll's `item_restrictions` listed a missing `hd14` (now `hd13`); studio color pickers limited to the game's palettes; searchable dropdowns.
+- Plans: `docs/plans/2026-11-08-character-studio-*.md`, `docs/plans/2026-11-08-species-extra-parts-plan.md`.
+
