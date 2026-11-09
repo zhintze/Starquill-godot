@@ -71,6 +71,7 @@ namespace Starquill.Studio.UI
             StudioUi.Button(top.transform, "Reroll body", () => Change(() => roller.RollBody(c, random, rng)), 150f);
             StudioUi.Button(top.transform, "Reroll gear", () => Change(() => roller.RollGear(c, random, rng)), 150f);
             StudioUi.Button(top.transform, "Export this", Export, 150f);
+            StudioUi.Button(top.transform, "Presets", OpenPresets, 130f);
             status = StudioUi.Label(top.transform, "Ctrl+Z undo, Ctrl+Y redo.", 18f);
 
             var frame = new GameObject("PreviewFrame", typeof(RectTransform), typeof(RawImage));
@@ -206,6 +207,28 @@ namespace Starquill.Studio.UI
             {
                 status.text = $"Could not write to {folder}: {e.Message}";
             }
+        }
+
+        private void OpenPresets()
+        {
+            var files = app.PresetFiles;
+            new PresetView(canvas, "Character presets", "characters", Path.Combine(files.Root, PresetStore.Characters),
+                files.List(PresetStore.Characters), c.SpeciesName, name =>
+                {
+                    try { status.text = "Saved " + files.Save(PresetStore.Characters, name, Presets.FromCharacter(c)); }
+                    catch (Exception e) when (e is IOException || e is UnauthorizedAccessException) { status.text = "Could not save: " + e.Message; }
+                }, name =>
+                {
+                    var p = files.Load<CharacterPreset>(PresetStore.Characters, name, out var error);
+                    if (p == null) { status.text = error; return; }
+                    var problems = new List<string>();
+                    var loaded = Presets.ToCharacter(p, Data, name, problems);
+                    app.LoadWarnings.AddRange(problems);
+                    if (loaded == null) { status.text = problems.FirstOrDefault() ?? "Could not load."; return; }
+                    Change(() => c.CopyFrom(loaded), problems.Count == 0
+                        ? $"Loaded {name}."
+                        : $"Loaded {name} with {problems.Count} {(problems.Count == 1 ? "warning" : "warnings")} (see Warnings on the Bulk screen).");
+                });
         }
 
         // ---- row helpers ----

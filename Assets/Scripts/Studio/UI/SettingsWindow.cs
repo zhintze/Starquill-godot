@@ -24,6 +24,20 @@ namespace Starquill.Studio.UI
                 close();
                 new SettingsWindow(canvasRoot, data, s);
             }, 230f);
+            StudioUi.Button(top.transform, "Presets", () =>
+            {
+                var files = PresetStore.Default;
+                close();
+                new PresetView(canvasRoot, "Random settings presets", "settings", System.IO.Path.Combine(files.Root, PresetStore.Random),
+                    files.List(PresetStore.Random), "settings",
+                    name => { files.Save(PresetStore.Random, name, Presets.FromRandom(s)); new SettingsWindow(canvasRoot, data, s); },
+                    name =>
+                    {
+                        var p = files.Load<RandomPreset>(PresetStore.Random, name, out _);
+                        if (p != null) Presets.ToRandom(p, s);
+                        new SettingsWindow(canvasRoot, data, s);
+                    });
+            }, 130f);
             StudioUi.Label(top.transform, "Changes apply to the next Randomize All, Equip Random or Reroll.", 17f);
 
             Header(list, "Chance per slot (0 = never, 1 = always)");

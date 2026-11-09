@@ -16,6 +16,11 @@ namespace Starquill.Studio
         public StudioSettings Settings => settings;
         public StudioData Data { get; private set; }
         public StudioRenderer Renderer => studioRenderer;
+        private PresetStore presetFiles;
+        public PresetStore PresetFiles => presetFiles ??= PresetStore.Default; // lazy: Application.dataPath is not allowed in a MonoBehaviour constructor
+        /// Problems found while loading presets (P27), shown in the Warnings list.
+        public System.Collections.Generic.List<string> LoadWarnings { get; } = new System.Collections.Generic.List<string>();
+        public int WarningCount => Data.Issues.Count + Renderer.Resolver.MissingPaths.Count + LoadWarnings.Count;
 
         private void Start()
         {

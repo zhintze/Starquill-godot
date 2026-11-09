@@ -18,7 +18,7 @@ namespace Starquill.Studio.UI
             var header = StudioUi.Row(col.transform, "Header", 44f);
             var issues = app.Data.Issues;
             int errors = issues.Count(i => i.level == ArtIssueLevel.Error);
-            StudioUi.Label(header.transform, $"Warnings: {issues.Count - errors}   Errors: {errors}", 24f, 600f);
+            StudioUi.Label(header.transform, $"Warnings: {app.WarningCount - errors}   Errors: {errors}", 24f, 600f);
             StudioUi.Button(header.transform, "Close", () => Object.Destroy(panel.gameObject), 120f);
 
             var list = StudioUi.ScrollList(col.transform);
@@ -31,7 +31,9 @@ namespace Starquill.Studio.UI
             }
             foreach (var path in app.Renderer.Resolver.MissingPaths.OrderBy(p => p))
                 StudioUi.Label(list, $"Warning: {path}.png: image not found while drawing", 17f).textWrappingMode = TextWrappingModes.Normal;
-            if (issues.Count == 0 && app.Renderer.Resolver.MissingPaths.Count == 0)
+            foreach (var line in app.LoadWarnings)
+                StudioUi.Label(list, "Warning: " + line, 17f).textWrappingMode = TextWrappingModes.Normal;
+            if (app.WarningCount == 0)
                 StudioUi.Label(list, "No problems found.", 18f);
         }
     }

@@ -73,6 +73,7 @@ namespace Starquill.Studio.UI
             StudioUi.Button(make.transform, "Randomize All", RandomizeAll, 170f);
             StudioUi.Button(make.transform, "Equip Random", EquipRandom, 170f);
             StudioUi.Button(make.transform, "Settings", OpenSettings, 130f);
+            StudioUi.Button(make.transform, "Presets", OpenPresets, 130f);
             StudioUi.Spacer(make.transform);
             warnings = StudioUi.Button(make.transform, "Warnings", () => new WarningsView(canvas, app), 170f);
             StudioUi.Button(make.transform, "Repo folder", app.ShowRepoPicker, 150f);
@@ -288,6 +289,87 @@ namespace Starquill.Studio.UI
             else if (status.text == NoSpecies) ShowStatus("", false);
         }
 
+        // ---- cast presets (P28) ----
+
+        private void OpenPresets()
+        {
+            search.text = "";
+            var files = app.PresetFiles;
+            new PresetView(canvas, "Cast presets", "casts", Path.Combine(files.Root, PresetStore.Casts),
+                files.List(PresetStore.Casts), "cast", SaveCast, LoadCast);
+        }
+
+        private void SaveCast(string name)
+        {
+            try
+            {
+                string path = app.PresetFiles.Save(PresetStore.Casts, name, Presets.FromCast(characters, forced.Items, S.excludedSpecies));
+                ShowStatus($"Saved cast to {path}", false);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                ShowStatus($"Could not save the cast: {e.Message}", true);
+            }
+        }
+
+        private void LoadCast(string name)
+        {
+            var p = app.PresetFiles.Load<CastPreset>(PresetStore.Casts, name, out var error);
+            if (p == null)
+            {
+                ShowStatus(error, true);
+                return;
+            }
+            var problems = new List<string>();
+            var loaded = (p.characters ?? new List<CharacterPreset>())
+                .Select(cp => Presets.ToCharacter(cp, Data, name, problems)).Where(ch => ch != null).ToList();
+            if (loaded.Count == 0)
+            {
+                app.LoadWarnings.AddRange(problems);
+                UpdateWarningsButton();
+                ShowStatus($"Cast {name} has no character that can be drawn with the current art.", true);
+                return;
+            }
+
+            foreach (var item in forced.Items.ToList()) forced.Remove(item);
+            foreach (var chip in chips.Values) UnityEngine.Object.Destroy(chip);
+            chips.Clear();
+            foreach (var token in p.forcedItems ?? new List<string>())
+            {
+                var item = Presets.ParseToken(token);
+                string why = "not an item";
+                if (item != null && forced.TryAdd(item, out why)) AddChip(item);
+                else problems.Add($"Preset {name}: forced item {token} not added ({why}).");
+            }
+            noChips.gameObject.SetActive(chips.Count == 0);
+
+            S.excludedSpecies.Clear();
+            S.excludedSpecies.AddRange((p.excludedSpecies ?? new List<string>()).Where(Data.SpeciesNames.Contains));
+            app.SaveSettings();
+
+            for (int i = cards.Count - 1; i >= 0; i--)
+            {
+                UnityEngine.Object.Destroy(cards[i].Root);
+                UnityEngine.Object.Destroy(cards[i].Display.gameObject);
+            }
+            cards.Clear();
+            characters.Clear();
+            foreach (var ch in loaded)
+            {
+                characters.Add(ch);
+                cards.Add(CreateCard(cards.Count));
+                Redraw(cards.Count - 1);
+            }
+
+            app.LoadWarnings.AddRange(problems);
+            UpdateSpeciesButton();
+            UpdateExportButton();
+            UpdateWarningsButton();
+            ShowStatus(problems.Count == 0
+                ? $"Loaded cast {name}: {loaded.Count} characters."
+                : $"Loaded cast {name}: {loaded.Count} characters, {problems.Count} {(problems.Count == 1 ? "warning" : "warnings")} (see Warnings).", problems.Count > 0);
+        }
+
         // ---- search and forced items ----
 
         private static RectTransform CreateResultsPanel(Transform searchInput)
@@ -462,8 +544,7 @@ namespace Starquill.Studio.UI
 
         private void UpdateWarningsButton()
         {
-            int count = Data.Issues.Count + app.Renderer.Resolver.MissingPaths.Count;
-            warnings.GetComponentInChildren<TMP_Text>().text = $"Warnings ({count})";
+            warnings.GetComponentInChildren<TMP_Text>().text = $"Warnings ({app.WarningCount})";
         }
     }
 }
