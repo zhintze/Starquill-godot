@@ -168,23 +168,35 @@ namespace Starquill.Studio.UI
             return button;
         }
 
-        public static TMP_Dropdown Dropdown(Transform parent, IList<string> options, int value, Action<int> onChanged, float width = 160f)
+        /// The studio's dropdown: a PickList (tall, fast-scrolling, searchable list).
+        public static PickList Dropdown(Transform parent, IList<string> options, int value, Action<int> onChanged, float width = 160f)
         {
-            var go = TMP_DefaultControls.CreateDropdown(TmpRes());
+            var go = new GameObject("Dropdown", typeof(RectTransform), typeof(Image), typeof(Button));
             go.transform.SetParent(parent, false);
             go.GetComponent<Image>().color = ControlColor;
-            var dd = go.GetComponent<TMP_Dropdown>();
-            dd.ClearOptions();
-            dd.AddOptions(new List<string>(options));
-            dd.SetValueWithoutNotify(Mathf.Clamp(value, 0, options.Count - 1));
-            dd.captionText.color = TextColor;
-            dd.captionText.fontSize = 20f;
-            dd.captionText.textWrappingMode = TextWrappingModes.NoWrap;
-            dd.captionText.overflowMode = TextOverflowModes.Ellipsis;
-            dd.itemText.fontSize = 20f;
-            dd.onValueChanged.AddListener(i => onChanged(i));
+
+            var caption = Label(go.transform, "", 20f);
+            caption.overflowMode = TextOverflowModes.Ellipsis;
+            caption.raycastTarget = false;
+            Stretch((RectTransform)caption.transform, 10f, 0f, 30f, 0f);
+
+            var arrowGo = new GameObject("Arrow", typeof(RectTransform), typeof(Image));
+            arrowGo.transform.SetParent(go.transform, false);
+            var arrowImage = arrowGo.GetComponent<Image>();
+            arrowImage.sprite = ArrowSprite();
+            arrowImage.color = TextColor;
+            arrowImage.raycastTarget = false;
+            var art = (RectTransform)arrowGo.transform;
+            art.anchorMin = art.anchorMax = new Vector2(1f, 0.5f);
+            art.pivot = new Vector2(1f, 0.5f);
+            art.sizeDelta = new Vector2(20f, 20f);
+            art.anchoredPosition = new Vector2(-8f, 0f);
+
+            var pick = go.AddComponent<PickList>();
+            pick.Init(caption, options, value, onChanged);
+            go.GetComponent<Button>().onClick.AddListener(pick.Open);
             Size(go, width, 40f);
-            return dd;
+            return pick;
         }
 
         public static Toggle Toggle(Transform parent, string label, bool value, Action<bool> onChanged, float width = 120f)
@@ -311,6 +323,19 @@ namespace Starquill.Studio.UI
             Button(row.transform, cancelLabel, () => { close(); onCancel?.Invoke(); }, 300f);
         }
 
+        /// Dark scrollbars (the default controls draw them plain white).
+        public static void StyleScrollbars(ScrollRect scroll)
+        {
+            foreach (var bar in new[] { scroll.verticalScrollbar, scroll.horizontalScrollbar })
+            {
+                if (bar == null) continue;
+                var track = bar.GetComponent<Image>();
+                if (track != null) track.color = new Color(0.10f, 0.10f, 0.12f);
+                if (bar.handleRect != null && bar.handleRect.GetComponent<Image>() is Image handle)
+                    handle.color = new Color(0.45f, 0.45f, 0.52f);
+            }
+        }
+
         /// Vertical scroll area whose content is a grid of fixed-size cells.
         public static RectTransform ScrollGrid(Transform parent, Vector2 cell, float spacing)
         {
@@ -319,7 +344,8 @@ namespace Starquill.Studio.UI
             go.GetComponent<Image>().color = Background;
             var scroll = go.GetComponent<ScrollRect>();
             scroll.horizontal = false;
-            scroll.scrollSensitivity = 40f;
+            scroll.scrollSensitivity = 60f;
+            StyleScrollbars(scroll);
             var content = scroll.content;
             var grid = content.gameObject.AddComponent<GridLayoutGroup>();
             grid.cellSize = cell;
@@ -338,7 +364,8 @@ namespace Starquill.Studio.UI
             go.GetComponent<Image>().color = Background;
             var scroll = go.GetComponent<ScrollRect>();
             scroll.horizontal = false;
-            scroll.scrollSensitivity = 40f;
+            scroll.scrollSensitivity = 60f;
+            StyleScrollbars(scroll);
             var content = scroll.content;
             var col = content.gameObject.AddComponent<VerticalLayoutGroup>();
             col.padding = new RectOffset(10, 10, 10, 10);

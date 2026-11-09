@@ -23,7 +23,7 @@ namespace Starquill.Studio.UI
             public GameObject Root;
             public CharacterDisplay Display;
             public RawImage Image;
-            public TMP_Dropdown Species;
+            public PickList Species;
             public Button SkinButton;
             public Image Skin;
             public Toggle Lock;
