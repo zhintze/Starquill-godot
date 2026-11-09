@@ -74,6 +74,10 @@ namespace Starquill.Studio
             }
         }
 
+        /// Labels of the parts drawn on these layers (a skin variance row's name).
+        public static List<string> PartsOn(SpeciesDisplayData species, DisplayDataRegistry registry, string hairGroup, IEnumerable<int> layers) =>
+            HiddenBy(species, registry, hairGroup, layers);
+
         /// Labels of the parts drawn on one of these layers: the gear row's
         /// "hides ..." note. species is what is drawn (StudioCharacter.SpeciesView).
         public static List<string> HiddenBy(SpeciesDisplayData species, DisplayDataRegistry registry, string hairGroup, IEnumerable<int> hiddenLayers)

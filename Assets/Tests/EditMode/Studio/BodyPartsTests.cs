@@ -45,6 +45,15 @@ namespace Starquill.Tests.Studio
         }
 
         [Test]
+        public void PartsOn_CentaurVarianceLayer_IsTheLegs()
+        {
+            var centaur = D.Registry.Species["centaur"];
+            var set = centaur.SkinVarianceSets.Single(); // species_skin_variance.csv: centaur,37
+
+            CollectionAssert.Contains(BodyParts.PartsOn(centaur, D.Registry, null, set.Indices), "Legs");
+        }
+
+        [Test]
         public void HiddenBy_NamesThePartsAnItemCovers()
         {
             var human = D.Registry.Species["human"];

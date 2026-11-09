@@ -319,6 +319,23 @@ namespace Starquill.Studio.UI
                 ColorButton(row, c.Body.FacialDetailColor, "Facial detail color", Palette(sp.FacialDetailColor, true), col => c.Body.FacialDetailColor = col);
             }
 
+            // Species parts with their own random color (species_skin_variance.csv), e.g. a centaur's horse body.
+            foreach (var set in sp.SkinVarianceSets ?? Array.Empty<SkinVarianceSet>())
+            {
+                if (set?.Indices == null || set.Indices.Length == 0 || set.HexColors == null || set.HexColors.Length == 0) continue;
+                var layers = set.Indices;
+                var parts = BodyParts.PartsOn(sp, Data.Registry, c.Body.ChosenHairGroup, layers);
+                string name = parts.Count > 0 ? string.Join(", ", parts) : "Layers " + string.Join(" ", layers);
+                row = Row(parts.Count == 1 ? parts[0] + " color" : "Extra color");
+                var palette = set.HexColors.Select(ColorManager.ParseHex).ToArray();
+                Color currentColor = c.Body.SkinVarianceColors.TryGetValue(layers[0], out var cc) ? cc : Color.white;
+                ColorButton(row, currentColor, $"{name} color", palette, col =>
+                {
+                    foreach (int layer in layers) c.Body.SkinVarianceColors[layer] = col;
+                });
+                StudioUi.Label(row, $"{name} (layers {string.Join(" ", layers)})", 16f);
+            }
+
             foreach (var part in BodyParts.Editable(sp))
             {
                 row = Row(part.Label);
