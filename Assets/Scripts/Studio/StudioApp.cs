@@ -20,7 +20,9 @@ namespace Starquill.Studio
         public PresetStore PresetFiles => presetFiles ??= PresetStore.Default; // lazy: Application.dataPath is not allowed in a MonoBehaviour constructor
         /// Problems found while loading presets (P27), shown in the Warnings list.
         public System.Collections.Generic.List<string> LoadWarnings { get; } = new System.Collections.Generic.List<string>();
-        public int WarningCount => Data.Issues.Count + Renderer.Resolver.MissingPaths.Count + LoadWarnings.Count;
+        /// Results of Library > Check images (empty and duplicate drawings).
+        public System.Collections.Generic.List<Starquill.Data.Art.ArtIssue> ImageWarnings { get; } = new System.Collections.Generic.List<Starquill.Data.Art.ArtIssue>();
+        public int WarningCount => Data.Issues.Count + Renderer.Resolver.MissingPaths.Count + LoadWarnings.Count + ImageWarnings.Count;
 
         private void Start()
         {
@@ -55,6 +57,18 @@ namespace Starquill.Studio
             sprites = new DiskSpriteSource(root);
             studioRenderer = new StudioRenderer(Data, new ImageResolver(sprites), transform);
             new BulkScreen(canvas.transform, this);
+        }
+
+        /// After a Library change (P34): reread the tables and images, rebuild
+        /// the Bulk screen and put the grid back from keep.
+        public void ReloadArt(CastPreset keep)
+        {
+            ClearScreens();
+            Data.Reload();
+            studioRenderer.Dispose();
+            studioRenderer.Resolver.ClearCache();
+            sprites.Dispose();
+            new BulkScreen(canvas.transform, this, keep);
         }
 
         public void SaveSettings()

@@ -180,7 +180,7 @@ namespace Starquill.Studio
             }
             if (folder != null && File.Exists(folder + ".meta")) File.Delete(folder + ".meta");
             result.Ok = true;
-            result.Message = $"Removed {key} from {FileName(kind)}" + (folder != null ? $" and its folder ({images} images)." : ".");
+            result.Message = $"Removed {key} from {FileName(kind)}" + (folder != null ? $" and its folder ({images} {(images == 1 ? "image" : "images")})." : ".");
             return result;
         }
 

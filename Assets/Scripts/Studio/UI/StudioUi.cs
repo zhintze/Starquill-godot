@@ -298,6 +298,19 @@ namespace Starquill.Studio.UI
             return list;
         }
 
+        /// Small modal question with two buttons. onCancel may be null.
+        public static void Confirm(Transform canvasRoot, string title, string message, string okLabel, Action onOk,
+            string cancelLabel = "Cancel", Action onCancel = null)
+        {
+            var list = Popup(canvasRoot, title, new Vector2(760, 380), out var close);
+            var text = Label(list, message, 19f);
+            text.textWrappingMode = TextWrappingModes.Normal;
+            Size(text.gameObject, -1, 150f);
+            var row = Row(list, "Buttons", 44f);
+            Button(row.transform, okLabel, () => { close(); onOk(); }, 300f);
+            Button(row.transform, cancelLabel, () => { close(); onCancel?.Invoke(); }, 300f);
+        }
+
         /// Vertical scroll area whose content is a grid of fixed-size cells.
         public static RectTransform ScrollGrid(Transform parent, Vector2 cell, float spacing)
         {

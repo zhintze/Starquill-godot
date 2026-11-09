@@ -31,6 +31,8 @@ namespace Starquill.Studio.UI
             }
             foreach (var path in app.Renderer.Resolver.MissingPaths.OrderBy(p => p))
                 StudioUi.Label(list, $"Warning: {path}.png: image not found while drawing", 17f).textWrappingMode = TextWrappingModes.Normal;
+            foreach (var issue in app.ImageWarnings)
+                StudioUi.Label(list, issue.ToString(), 17f).textWrappingMode = TextWrappingModes.Normal;
             foreach (var line in app.LoadWarnings)
                 StudioUi.Label(list, "Warning: " + line, 17f).textWrappingMode = TextWrappingModes.Normal;
             if (app.WarningCount == 0)

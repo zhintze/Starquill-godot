@@ -51,7 +51,8 @@ namespace Starquill.Studio.UI
         private StudioData Data => app.Data;
         private StudioSettings S => app.Settings;
 
-        public BulkScreen(Transform parent, StudioApp app)
+        /// restore: a grid to put back (after a Library change) instead of a new random one.
+        public BulkScreen(Transform parent, StudioApp app, CastPreset restore = null)
         {
             this.app = app;
             canvas = parent;
@@ -74,6 +75,7 @@ namespace Starquill.Studio.UI
             StudioUi.Button(make.transform, "Equip Random", EquipRandom, 170f);
             StudioUi.Button(make.transform, "Settings", OpenSettings, 130f);
             StudioUi.Button(make.transform, "Presets", OpenPresets, 130f);
+            StudioUi.Button(make.transform, "Library", OpenLibrary, 130f);
             StudioUi.Spacer(make.transform);
             warnings = StudioUi.Button(make.transform, "Warnings", () => new WarningsView(canvas, app), 170f);
             StudioUi.Button(make.transform, "Repo folder", app.ShowRepoPicker, 150f);
@@ -102,7 +104,8 @@ namespace Starquill.Studio.UI
             grid = StudioUi.ScrollGrid(root, new Vector2(220, 340), 12f);
             StudioUi.Stretch((RectTransform)grid.parent.parent, 0, 120, 0, 96); // the ScrollView
 
-            SetCount(S.count);
+            if (restore != null) ApplyCast(restore, "art reload", "Art reloaded; the grid is kept");
+            else SetCount(S.count);
             UpdateSpeciesButton();
             UpdateWarningsButton();
             UpdateExportButton();
@@ -289,6 +292,19 @@ namespace Starquill.Studio.UI
             else if (status.text == NoSpecies) ShowStatus("", false);
         }
 
+        // ---- library (P34) ----
+
+        private void OpenLibrary()
+        {
+            search.text = "";
+            bulkRoot.gameObject.SetActive(false);
+            new LibraryScreen(canvas, app, changed =>
+            {
+                if (changed) app.ReloadArt(Presets.FromCast(characters, forced.Items, S.excludedSpecies));
+                else bulkRoot.gameObject.SetActive(true);
+            });
+        }
+
         // ---- cast presets (P28) ----
 
         private void OpenPresets()
@@ -320,6 +336,11 @@ namespace Starquill.Studio.UI
                 ShowStatus(error, true);
                 return;
             }
+            ApplyCast(p, name);
+        }
+
+        private void ApplyCast(CastPreset p, string name, string doneLabel = null)
+        {
             var problems = new List<string>();
             var loaded = (p.characters ?? new List<CharacterPreset>())
                 .Select(cp => Presets.ToCharacter(cp, Data, name, problems)).Where(ch => ch != null).ToList();
@@ -365,9 +386,10 @@ namespace Starquill.Studio.UI
             UpdateSpeciesButton();
             UpdateExportButton();
             UpdateWarningsButton();
+            string label = doneLabel ?? $"Loaded cast {name}";
             ShowStatus(problems.Count == 0
-                ? $"Loaded cast {name}: {loaded.Count} characters."
-                : $"Loaded cast {name}: {loaded.Count} characters, {problems.Count} {(problems.Count == 1 ? "warning" : "warnings")} (see Warnings).", problems.Count > 0);
+                ? $"{label}: {loaded.Count} characters."
+                : $"{label}: {loaded.Count} characters, {problems.Count} {(problems.Count == 1 ? "warning" : "warnings")} (see Warnings).", problems.Count > 0);
         }
 
         // ---- search and forced items ----
