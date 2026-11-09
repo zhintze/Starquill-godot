@@ -261,6 +261,11 @@ namespace Starquill.Studio.UI
             var root = new GameObject("Popup: " + title, typeof(RectTransform));
             root.transform.SetParent(canvasRoot, false);
             Stretch((RectTransform)root.transform);
+            // Above everything else, including the search results overlay (sorting order 50).
+            var overlay = root.AddComponent<Canvas>();
+            overlay.overrideSorting = true;
+            overlay.sortingOrder = 100;
+            root.AddComponent<GraphicRaycaster>();
             Action doClose = () => { if (root != null) UnityEngine.Object.Destroy(root); };
             close = doClose;
 
