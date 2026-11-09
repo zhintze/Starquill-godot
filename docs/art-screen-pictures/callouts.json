@@ -1,0 +1,277 @@
+{
+ "BG-1a": [
+  "Explore #6"
+ ],
+ "BG-1b": [
+  "Explore #7"
+ ],
+ "BG-1c": [
+  "Explore #8"
+ ],
+ "BG-1d": [
+  "Explore #9"
+ ],
+ "CH-1": [
+  "Quests #1",
+  "Loot #1",
+  "Party: Roster #1",
+  "Shop #1"
+ ],
+ "CH-10": [
+  "Item panel #3",
+  "Recruit panel #2",
+  "Key panel #2",
+  "Quest offer panel #2"
+ ],
+ "CH-11": [
+  "Quests #5",
+  "Quests #6",
+  "Loot #3",
+  "Item panel #8",
+  "Item panel #9",
+  "Party: Roster #2",
+  "Party: Roster #5",
+  "Party: Equipment #8",
+  "Shop #5",
+  "Recruit panel #8",
+  "Key panel #7",
+  "Key panel #8",
+  "Key panel #9",
+  "Quest offer panel #6",
+  "Quest offer panel #7"
+ ],
+ "CH-12": [
+  "Loot #4",
+  "Party: Roster #8"
+ ],
+ "CH-13": [
+  "Explore #4",
+  "Quests #12",
+  "Party: Roster #3",
+  "Party: Actions #6"
+ ],
+ "CH-14": [
+  "Loot #11",
+  "Party: Equipment #6",
+  "Party: Actions #1",
+  "Key panel #5",
+  "Quest offer panel #4"
+ ],
+ "CH-15": [
+  "Quests #16",
+  "Loot #10",
+  "Item panel #6",
+  "Party: Equipment #7",
+  "Key panel #6"
+ ],
+ "CH-16": [
+  "Explore #5"
+ ],
+ "CH-17": [
+  "Explore #16"
+ ],
+ "CH-18": [
+  "Quests #2",
+  "Party: Equipment #1",
+  "Shop #2"
+ ],
+ "CH-19": [
+  "Quests #8",
+  "Quests #9"
+ ],
+ "CH-2": [
+  "Explore #1"
+ ],
+ "CH-20": [
+  "Party: Actions #2"
+ ],
+ "CH-3": [
+  "Explore #21",
+  "Quests #17",
+  "Loot #13",
+  "Party: Roster #13",
+  "Shop #11"
+ ],
+ "CH-4": [
+  "Explore #22",
+  "Quests #17",
+  "Loot #13",
+  "Party: Roster #13",
+  "Shop #11"
+ ],
+ "CH-5": [
+  "Explore #23"
+ ],
+ "CH-6": [
+  "Explore #24",
+  "Quests #17",
+  "Loot #13",
+  "Party: Roster #13",
+  "Shop #11"
+ ],
+ "CH-7": [
+  "Quests #3",
+  "Quests #14",
+  "Loot #7",
+  "Party: Roster #12",
+  "Party: Equipment #2",
+  "Shop #3",
+  "Shop #8"
+ ],
+ "CH-8": [
+  "Loot #5",
+  "Party: Roster #9"
+ ],
+ "CH-9": [
+  "Item panel #2",
+  "Recruit panel #1",
+  "Key panel #1",
+  "Quest offer panel #1"
+ ],
+ "EN-1": [
+  "Explore #12"
+ ],
+ "EN-2": [
+  "Explore #12"
+ ],
+ "EN-3": [
+  "Explore #11"
+ ],
+ "EN-4": [
+  "Explore #13"
+ ],
+ "EN-5": [
+  "Explore #19"
+ ],
+ "IC-1": [
+  "Explore #18",
+  "Loot #9",
+  "Item panel #5",
+  "Party: Roster #4",
+  "Party: Equipment #5",
+  "Party: Actions #1",
+  "Recruit panel #6",
+  "Recruit panel #7"
+ ],
+ "IC-10": [
+  "Quests #4",
+  "Quests #10",
+  "Quest offer panel #4"
+ ],
+ "IC-11": [
+  "Quests #7",
+  "Quest offer panel #5"
+ ],
+ "IC-12": [
+  "Party: Actions #3",
+  "Recruit panel #7"
+ ],
+ "IC-13": [
+  "Loot #6"
+ ],
+ "IC-14": [
+  "Loot #2"
+ ],
+ "IC-15": [
+  "Party: Roster #2"
+ ],
+ "IC-16": [
+  "Shop #10"
+ ],
+ "IC-17": [
+  "Shop #4"
+ ],
+ "IC-18": [
+  "Party: Actions #5"
+ ],
+ "IC-2": [
+  "Explore #2"
+ ],
+ "IC-20": [
+  "Quests #11"
+ ],
+ "IC-3": [
+  "Explore #3",
+  "Quests #13"
+ ],
+ "IC-4": [
+  "Item panel #4",
+  "Recruit panel #3",
+  "Key panel #3",
+  "Quest offer panel #3"
+ ],
+ "IC-5": [
+  "Party: Equipment #4"
+ ],
+ "IC-6": [
+  "Loot #8",
+  "Party: Equipment #3"
+ ],
+ "IC-7": [
+  "Loot #12",
+  "Item panel #7",
+  "Party: Roster #7",
+  "Party: Roster #10",
+  "Shop #9",
+  "Recruit panel #4"
+ ],
+ "IC-8": [
+  "Party: Actions #4",
+  "Shop #7"
+ ],
+ "IC-9": [
+  "Party: Roster #11"
+ ],
+ "KY-1": [
+  "Quests #15",
+  "Key panel #4"
+ ],
+ "KY-2": [
+  "Quests #15",
+  "Key panel #4"
+ ],
+ "KY-3": [
+  "Quests #15",
+  "Key panel #4"
+ ],
+ "KY-4": [
+  "Quests #15",
+  "Key panel #4"
+ ],
+ "SH-1": [
+  "Shop #10"
+ ],
+ "SH-3": [
+  "Quest offer panel #8"
+ ],
+ "SH-4": [
+  "Shop #10"
+ ],
+ "SH-5": [
+  "Shop #6"
+ ],
+ "VB-1": [
+  "Explore #17"
+ ],
+ "VB-2": [
+  "Explore #20"
+ ],
+ "VB-3": [
+  "Explore #20"
+ ],
+ "VX-1": [
+  "Explore #14"
+ ],
+ "VX-2": [
+  "Explore #14"
+ ],
+ "VX-3": [
+  "Explore #15"
+ ],
+ "VX-4": [
+  "Explore #15"
+ ],
+ "VX-5": [
+  "Explore #14"
+ ]
+}

@@ -79,3 +79,9 @@ tools/ArtTablesTests/obj/
 # Generated from Assets/Data/ArtTables/*.csv by the Editor baker
 /Assets/Resources/ArtTables.asset
 /Assets/Resources/ArtTables.asset.meta
+
+# Android build scratch (Unity)
+.utmp/
+
+# Zip of docs/art-screen-pictures/ (made for sending; the folder is the source)
+docs/art-screen-pictures.zip
