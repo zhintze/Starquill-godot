@@ -1,6 +1,6 @@
 # Character Studio Progress and Resume Notes
 
-2026-11-08 (updated 2026-11-08: Stage B1 done, CHECKPOINT D green; B2 detailed tasks written, awaiting Zach's go) · Read this before resuming.
+2026-11-08 (updated 2026-11-08: Stage B1 done, CHECKPOINT D green; running B2-B5 without stops; one Linux build at the end for all remaining checkpoints) · Read this before resuming.
 
 Mandate: "creating a standalone character selector/generator ... that exports generated and curated characters into standalone separate images with a transparent background as a png file for use in promotional content", built on "our current object oriented system", with the art rules "only storing in one place to avoid [them getting unsynced]" and "human readable AND make for easy git diffs" (Zach, 2026-11-08).
 
@@ -42,7 +42,7 @@ Done when (Stage B1, this handoff):
 | B1 T11 StudioUi | done | `99ee8c70`; compile clean; probe: `StudioUi` 15 helpers |
 | B1 T12 StudioApp, picker, Bulk, Warnings | done | `fc54fd8c`; compile clean; probe: `StudioApp`, `RepoPickerView`, `WarningsView`, `BulkScreen`. Deviation: `StudioApp.renderer` renamed `studioRenderer` (CS0108: hid `Component.renderer`); reflection confirms the rename compiled |
 | B1 T13 scene, build menu, builds | done | `d9216355`. Scene created, build list still only ExploreScene. Editor smoke (play + scripted clicks): 8 cards drawn, Lock survives Randomize All and Equip Random, Reroll, Count 64 builds 64 cards, Export wrote 8 trimmed RGBA PNGs with transparent corners; no studio errors in the log. Builds: Linux Succeeded 91 MB on disk (report 89 MB), 350 s; Windows Succeeded 96 MB on disk (report 94 MB), 235 s, 38 MB zipped. Deviations: (1) `CreateScene` first calls `SaveCurrentModifiedScenesIfUserWantsTo` (as written it silently dropped unsaved scene work); (2) `Build` sets the scripting backend only when it is not already Mono, and calls `AssetDatabase.SaveAssets()` after restoring: the first Linux build had left the studio's product name, window size, mode and a `Standalone: 0` line in `ProjectSettings.asset`; restored and verified identical to the pre-build diff, and the Windows build with the fix left it unchanged |
-| B2 plan (Tasks 14-23) | written, awaiting Zach's go | Phase B plan, section "Stage B2"; decisions P8-P16; commit below |
+| B2 plan (Tasks 14-23) | approved by Zach | `b5e9e4b5`; decisions P8-P16. Zach (2026-11-08): "all looks good continue all the way through the tasks until complete, then a linux build for full testing of all remaining checkpoints" |
 
 ## Decision map
 
@@ -88,7 +88,7 @@ Design-level decisions D1-D12 are in the design doc; planning decisions P1-P7 ar
 
 ## Next step
 
-Zach approves B2 (or changes P8-P16), then execute Tasks 14-23 with superpowers:executing-plans to CHECKPOINT E, same run rules as B1.
+Run mandate (2026-11-08): execute B2 Tasks 14-23, then write and execute B3, B4 and B5 detailed tasks without stopping at checkpoints E-G, then one Linux build; Zach tests all remaining checkpoints on that build and in the Test Runner. B6 (GitHub Release, artist README) is not part of this run: publishing needs Zach's approval and the README comes after testing.
 
 ## Open flags
 
