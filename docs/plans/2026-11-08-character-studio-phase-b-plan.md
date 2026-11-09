@@ -21,7 +21,7 @@ Phase B is large, so it lands in stages, each ending at a checkpoint where Zach 
 | **B1 Foundation** | assembly, disk sprites, data load from a repo folder, character model + roller, render + PNG export, minimal Bulk screen (Count, Randomize All, Equip Random, Lock, reroll, Export), repo picker, Warnings list, scene + Linux/Windows builds | **full (Tasks 1-13, CHECKPOINT D)** |
 | B2 Bulk screen complete | species multi-select, search + Forced items chips, card species/skin, Settings window, selected-only export, export folder | **full (Tasks 14-23, CHECKPOINT E)**, written after CHECKPOINT D |
 | B3 Single screen | Body and Gear tabs, variant thumbnails, color pickers, undo/redo | tasks 24-31 (P17: code in commits) |
-| B4 Presets | Character, Cast, Random settings JSON | outline |
+| B4 Presets | Character, Cast, Random settings JSON | tasks 32-35 (P17) |
 | B5 Library panel | new item type / species / part group, edit row, remove, Rescan, `.meta` writer, Excel lock | outline |
 | B6 Release | GitHub Release packaging, artist README | outline |
 
@@ -4447,15 +4447,30 @@ Written 2026-11-08 during the run-through Zach asked for ("continue all the way 
 
 Each task: write tests, compile-check (Refresh, `check_compile_errors`, reflection probe), implement, compile-check, commit. Tests run in Zach's Test Runner at the end.
 
-## Stages B4-B6 (outline; detailed after the previous stage)
+## Stage B4: Presets (Tasks 32-35)
 
-B2 (Tasks 14-23) and B3 (Tasks 24-31) are detailed above.
+### Decisions made while planning B4 (2026-11-08)
 
+| # | Decision | Why |
+|---|---|---|
+| P25 | Presets are JSON written by `JsonUtility` (pretty-printed), one file each, in `presets/characters/`, `presets/casts/`, `presets/random/` under the app folder (P5). Names keep letters, digits, spaces, `-` and `_`; anything else becomes `-`. | Design §2 Presets; readable files that diff well. |
+| P26 | A preset stores choices only: species, part group variants, hair group, hex colors (`#RRGGBB`), hide flags, locks, and per slot the item type, variant number, weapon part numbers and colors. A Cast stores its characters, the forced items and the unchecked species. | Design §2 "They store choices only". |
+| P27 | Loading checks every choice against the current art. A missing species skips that character; a missing item variant leaves the slot empty; a missing part variant takes the group's first drawing; a bad color becomes white. Each one adds a line to the Warnings list ("Preset ...: ..."). | Design §2 "Missing art loads as an empty slot plus a warning". |
+| P28 | Save/Load sit where the thing lives: Character on the Single screen, Cast on the Bulk top bar (**Presets**), Random settings in the Settings window. Saving over an existing name replaces it. | Nielsen: match between the system and the real world; one place per kind. |
 
-**B4 Presets** (JSON in `presets/` next to the exe; Editor: `Library/CharacterStudio/presets/`)
-- Character: species, body choices (part numbers, hide flags, colors as hex), gear per slot (type, number, layer variants, hex colors).
-- Cast: the Bulk grid incl. locks and forced items. Random settings: `RandomSettings`.
-- Loading missing art: empty slot + a Warnings entry. EditMode round-trip tests, including a preset that names a deleted variant.
+### Tasks
+
+| Task | Files | Tests |
+|---|---|---|
+| 32 Preset model and conversion | new `Presets.cs` (DTOs + `Presets.FromCharacter/ToCharacter`, cast and random settings conversion, load warnings) | `PresetsTests` (round trips, missing variant, unknown species, missing part, bad color, readable JSON) |
+| 33 Preset files | new `PresetStore.cs` (folders, list, save, load, name cleanup) | `PresetStoreTests` |
+| 34 Preset UI | new `UI/PresetView.cs`; `StudioApp` (`LoadWarnings`), `WarningsView`, `BulkScreen` (Presets button, cast load), `SettingsWindow`, `SingleScreen` | none (UI) |
+| 35 Editor smoke run | none | save and load each kind; a hand-edited preset with a missing variant shows a warning |
+
+## Stages B5-B6 (outline; detailed after the previous stage)
+
+B2 (Tasks 14-23), B3 (Tasks 24-31) and B4 (Tasks 32-35) are detailed above.
+
 
 **B5 Library panel**
 - New item type (slot → next free code suggestion, description, layer codes, hidden layers, second-color layers): appends a CSV row via `CsvTable` (one-line diff), creates `equipment/<type>/` or `weapons/<type>/`, **Open folder**. Same pattern for species (`species.csv`) and part groups (`species_parts.csv`).
