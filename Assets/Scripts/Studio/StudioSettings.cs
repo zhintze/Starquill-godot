@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
@@ -18,6 +19,9 @@ namespace Starquill.Studio
         public bool trim = true;
         public int padding = 8;
         public int count = 8;
+        /// Species left out of random rolls (unchecked in the Species window).
+        /// Stored as exclusions so species added later start checked (P13).
+        public List<string> excludedSpecies = new List<string>();
 
         public static string AppFolder => Application.isEditor
             ? Path.Combine(Directory.GetParent(Application.dataPath).FullName, "Library", "CharacterStudio")
@@ -25,8 +29,10 @@ namespace Starquill.Studio
 
         public static string DefaultPath => Path.Combine(AppFolder, "studio-settings.json");
 
+        public static string DefaultExportFolder => Path.Combine(AppFolder, "exports");
+
         public string ResolvedExportFolder =>
-            string.IsNullOrWhiteSpace(exportFolder) ? Path.Combine(AppFolder, "exports") : exportFolder;
+            string.IsNullOrWhiteSpace(exportFolder) ? DefaultExportFolder : exportFolder;
 
         public static int SnapScale(int scale)
         {
@@ -40,7 +46,11 @@ namespace Starquill.Studio
             try
             {
                 if (File.Exists(path))
-                    return JsonUtility.FromJson<StudioSettings>(File.ReadAllText(path)) ?? new StudioSettings();
+                {
+                    var s = JsonUtility.FromJson<StudioSettings>(File.ReadAllText(path)) ?? new StudioSettings();
+                    s.excludedSpecies ??= new List<string>();
+                    return s;
+                }
             }
             catch (Exception e)
             {

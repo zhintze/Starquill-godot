@@ -37,5 +37,42 @@ namespace Starquill.Tests.Studio
         {
             Assert.AreEqual(expected, StudioSettings.SnapScale(input));
         }
+
+        [Test]
+        public void ExcludedSpecies_DefaultsEmpty_AndRoundTrips()
+        {
+            Assert.IsEmpty(new StudioSettings().excludedSpecies);
+            string path = Path.Combine(Path.GetTempPath(), "studio_" + Path.GetRandomFileName(), "studio-settings.json");
+            try
+            {
+                var s = new StudioSettings();
+                s.excludedSpecies.Add("naga");
+                s.Save(path);
+                CollectionAssert.AreEqual(new[] { "naga" }, StudioSettings.Load(path).excludedSpecies);
+            }
+            finally { Directory.Delete(Path.GetDirectoryName(path), true); }
+        }
+
+        [Test]
+        public void Load_B1FileWithoutExcludedSpecies_GivesAnEmptyList()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "b1_" + Path.GetRandomFileName() + ".json");
+            File.WriteAllText(path, "{ \"repoRoot\": \"/r\", \"count\": 16 }");
+            try
+            {
+                var s = StudioSettings.Load(path);
+                Assert.AreEqual(16, s.count);
+                Assert.IsNotNull(s.excludedSpecies);
+                Assert.IsEmpty(s.excludedSpecies);
+            }
+            finally { File.Delete(path); }
+        }
+
+        [Test]
+        public void ResolvedExportFolder_EmptyMeansDefault()
+        {
+            Assert.AreEqual(StudioSettings.DefaultExportFolder, new StudioSettings().ResolvedExportFolder);
+            Assert.AreEqual("/x", new StudioSettings { exportFolder = "/x" }.ResolvedExportFolder);
+        }
     }
 }
