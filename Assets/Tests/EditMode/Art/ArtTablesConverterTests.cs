@@ -14,9 +14,9 @@ namespace Starquill.Tests.Art
             {
                 EquipmentCsv = EquipHeader,
                 WeaponsCsv = "item_type,description,hand_type,modular,layer_codes,hidden_layers,color_variance_layers\n",
-                SpeciesCsv = "name,x_scale,y_scale,head_y_offset,head_zoom,back_arm,legs,body,head,front_arm,eyes,nose,mouth,ears,facial_hair,facial_detail,hair_groups,other_body_parts,skin_palette,hair_palette,eye_palette,facial_detail_palette,item_restrictions\n",
+                SpeciesCsv = "name,x_scale,y_scale,head_y_offset,head_zoom,back_arm,legs,body,head,front_arm,eyes,nose,mouth,ears,facial_hair,facial_detail,hair_groups,skin_palette,hair_palette,eye_palette,facial_detail_palette,item_restrictions\n",
                 SpeciesPartsCsv = "group,description,layers\n",
-                SkinVarianceCsv = "species,layers,palette\n",
+                ExtraPartsCsv = "species,part,color,color_group,chance\n",
                 PalettesCsv = "palette,hex\nmain,#FFFFFF\n",
                 ImageFiles = files.ToList()
             };
@@ -256,22 +256,22 @@ namespace Starquill.Tests.Art
             CollectionAssert.AreEqual(new[] { 0, 1 }, g.variants);
         }
 
-        private static ArtSources SpeciesSources(string speciesRow, string skinVarianceRows = "")
+        private static ArtSources SpeciesSources(string speciesRow, string extraPartRows = "")
         {
             var src = Sources(
                 "species/body/0001-016.png", "species/body/0001-037.png",
-                "species/f01/f01-0001-084.png", "species/h01/h01-0001-092.png",
+                "species/f01/f01-0001-084.png", "species/h01/h01-0001-092.png", "species/body/0014-002.png",
                 "equipment/hd12/hd12-0001-130.png");
             src.EquipmentCsv += "hd12,tight facemask,130,,\n";
             src.SpeciesPartsCsv = "group,description,layers\nf01,eyes,84\nh01,hair,92\n";
             src.PalettesCsv = "palette,hex\nmain,#FFFFFF\nhuman,#3A1914\nskin_naga,#F3D9C2\n";
             src.SpeciesCsv += speciesRow + "\n";
-            src.SkinVarianceCsv += skinVarianceRows;
+            src.ExtraPartsCsv += extraPartRows;
             return src;
         }
 
-        // name,x_scale,y_scale,head_y_offset,head_zoom,back_arm,legs,body,head,front_arm,eyes,nose,mouth,ears,facial_hair,facial_detail,hair_groups,other_body_parts,skin_palette,hair_palette,eye_palette,facial_detail_palette,item_restrictions
-        private const string Human = "human,1,1,0.35,0.5,0001-016,0001-037,,,,f01,,,,,,h01,,human,,,,hd12";
+        // name,x_scale,y_scale,head_y_offset,head_zoom,back_arm,legs,body,head,front_arm,eyes,nose,mouth,ears,facial_hair,facial_detail,hair_groups,skin_palette,hair_palette,eye_palette,facial_detail_palette,item_restrictions
+        private const string Human = "human,1,1,0.35,0.5,0001-016,0001-037,,,,f01,,,,,,h01,human,,,,hd12";
 
         [Test]
         public void Species_ParsesRow()
@@ -323,16 +323,66 @@ namespace Starquill.Tests.Art
         }
 
         [Test]
-        public void SkinVariance_RowsReferenceSpeciesAndPalette()
+        public void ExtraParts_ParsesRowsInFileOrder()
         {
-            var src = SpeciesSources(Human, "human,4 37,skin_naga\nelf,37,skin_naga\nhuman,37,nope\n");
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human,
+                "human,0014-002,skin_naga,wings,\nhuman,legs,skin_naga,wings,\nhuman,f01,hair,,0.25\n"));
+
+            Assert.IsFalse(r.HasErrors, string.Join("\n", Messages(r, ArtIssueLevel.Error)));
+            var rows = r.Data.speciesExtraParts;
+            CollectionAssert.AreEqual(new[] { "0014-002", "legs", "f01" }, rows.Select(x => x.part));
+            Assert.AreEqual("skin_naga", rows[0].color);
+            Assert.AreEqual("wings", rows[1].colorGroup);
+            Assert.AreEqual(1f, rows[0].chance);
+            Assert.AreEqual(0.25f, rows[2].chance, 1e-6f);
+        }
+
+        [TestCase("elf,0014-002,skin,,", "species 'elf'")]                  // unknown species
+        [TestCase("human,0014-002,nope,,", "color 'nope'")]                 // unknown color
+        [TestCase("human,x09,skin,,", "x09")]                               // unknown part group
+        [TestCase("human,wing!,skin,,", "part 'wing!'")]                    // not a part
+        [TestCase("human,0014-002,skin,,1.5", "chance")]                    // chance out of range
+        [TestCase("human,legs,skin_naga,,0.5", "chance")]                   // chance on a species part
+        [TestCase("human,0014-002,skin,,\nhuman,0014-002,hair,,", "twice")] // duplicate part
+        [TestCase("human,0014-002,skin_naga,g,\nhuman,legs,hair,g,", "color group g")] // group with two colors
+        public void ExtraParts_BadRows_AreErrors(string rows, string fragment)
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human, rows + "\n"));
+
+            var errors = Messages(r, ArtIssueLevel.Error).Where(m => m.StartsWith("species_extra_parts.csv")).ToList();
+            Assert.IsTrue(errors.Any(m => m.Contains(fragment)), string.Join("\n", Messages(r, ArtIssueLevel.Error)));
+        }
+
+        [Test]
+        public void ExtraParts_MissingBodyImage_IsWarning()
+        {
+            var r = ArtTablesConverter.Convert(SpeciesSources(Human, "human,0099-134,skin,,\n"));
+
+            Assert.IsFalse(r.HasErrors);
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Warning).Any(m => m.Contains("0099-134")));
+        }
+
+        [Test]
+        public void Species_OldOtherBodyPartsColumn_WithData_PointsToTheNewFile()
+        {
+            var src = SpeciesSources(Human);
+            src.SpeciesCsv = src.SpeciesCsv.Replace("hair_groups,skin_palette", "hair_groups,other_body_parts,skin_palette")
+                .Replace(",h01,human,", ",h01,0014-002,human,");
 
             var r = ArtTablesConverter.Convert(src);
 
-            var v = r.Data.skinVariance.Single();
-            Assert.AreEqual("human", v.species);
-            CollectionAssert.AreEqual(new[] { 4, 37 }, v.layers);
-            Assert.AreEqual(2, Messages(r, ArtIssueLevel.Error).Count(m => m.StartsWith("species_skin_variance.csv")));
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Error).Any(m => m.Contains("species_extra_parts.csv")));
+        }
+
+        [Test]
+        public void ExtraPartsFileMissing_IsError()
+        {
+            var src = SpeciesSources(Human);
+            src.ExtraPartsCsv = null;
+
+            var r = ArtTablesConverter.Convert(src);
+
+            Assert.IsTrue(Messages(r, ArtIssueLevel.Error).Any(m => m.StartsWith("species_extra_parts.csv")));
         }
     }
 }

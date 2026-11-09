@@ -15,7 +15,8 @@ namespace Starquill.Tests.Display
             d.palettes.Add(new PaletteRow { name = "skin_naga", hex = new[] { "F3D9C2", "746C5B" } });
             d.partGroups.Add(new PartGroupRow { group = "f01", layers = new[] { 84 }, variants = new[] { 2, 7 } });
             d.species.Add(new SpeciesRow { name = "naga", eyes = "f01", skinPalette = "skin_naga", hairPalette = "" });
-            d.skinVariance.Add(new SkinVarianceRow { species = "naga", layers = new[] { 37 }, palette = "skin_naga" });
+            d.speciesExtraParts.Add(new SpeciesExtraPartRow { species = "naga", part = "legs", color = "skin_naga", colorGroup = "" });
+            d.speciesExtraParts.Add(new SpeciesExtraPartRow { species = "naga", part = "0003-002", color = "hair", colorGroup = "", chance = 0.5f });
             d.equipment.Add(new EquipmentRow { itemType = "hd01", description = "hat", layerCodes = new[] { 130 }, variants = new[] { 1, 3 } });
             d.weapons.Add(new WeaponRow { itemType = "w01", description = "sword", layerCodes = new[] { 164 },
                 variantsPerLayer = new[] { new IntList(new[] { 1 }) } });
@@ -23,7 +24,7 @@ namespace Starquill.Tests.Display
         }
 
         [Test]
-        public void Load_MapsSpeciesPalettesAndSkinVariance()
+        public void Load_MapsSpeciesPalettesAndPartRules()
         {
             var reg = new DisplayDataRegistry();
             reg.Load(Data());
@@ -31,9 +32,17 @@ namespace Starquill.Tests.Display
             var s = reg.Species["naga"];
             CollectionAssert.AreEqual(new[] { "skin_naga" }, s.SkinColor);
             Assert.IsNull(s.HairColor);
-            Assert.AreEqual(1, s.SkinVarianceSets.Length);
-            CollectionAssert.AreEqual(new[] { "F3D9C2", "746C5B" }, s.SkinVarianceSets[0].HexColors);
-            CollectionAssert.AreEqual(new[] { 37 }, s.SkinVarianceSets[0].Indices);
+            Assert.AreEqual(2, s.PartRules.Length);
+            var legs = s.PartRules[0];
+            Assert.AreEqual("legs", legs.Part);
+            Assert.IsFalse(legs.IsExtra);
+            Assert.AreEqual("legs", legs.ColorKey);
+            CollectionAssert.AreEqual(new[] { ColorManager.ParseHex("F3D9C2"), ColorManager.ParseHex("746C5B") }, legs.Palette);
+            var extra = s.PartRules[1];
+            Assert.IsTrue(extra.IsExtra);
+            Assert.AreEqual("hair", extra.ColorSource);
+            Assert.IsNull(extra.Palette);
+            Assert.AreEqual(0.5f, extra.Chance);
         }
 
         [Test]

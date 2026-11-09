@@ -24,6 +24,7 @@ namespace Starquill.Tests.Art
             Assert.AreEqual(9, r.Data.weapons.Count);
             Assert.AreEqual(27, r.Data.species.Count);
             Assert.AreEqual(19, r.Data.partGroups.Count);
+            Assert.AreEqual(29, r.Data.speciesExtraParts.Count);
         }
 
         private static string FindProjectRoot()

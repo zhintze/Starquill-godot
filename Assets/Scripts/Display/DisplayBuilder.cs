@@ -14,9 +14,6 @@ namespace Starquill.Display
         /// in the hand.
         public static Vector2 OffhandWeaponOffset = new(10f, 4f);
 
-        private static readonly HashSet<string> HairFields = new() { "hair", "facialHair" };
-        private static readonly HashSet<string> EyesFields = new() { "eyes" };
-        private static readonly HashSet<string> FacialDetailFields = new() { "facialDetail" };
 
         private readonly DisplayDataRegistry registry;
 
@@ -58,25 +55,28 @@ namespace Starquill.Display
         {
             var pieces = new List<DisplayPiece>();
 
-            AddFieldPieces(pieces, "backArm", species.BackArm, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "legs", species.Legs, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "body", species.Body, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "head", species.Head, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "ears", species.Ears, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "eyes", species.Eyes, instance, instance.EyesColor);
-            AddFieldPieces(pieces, "nose", species.Nose, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "mouth", species.Mouth, instance, instance.SkinColor);
-            AddFieldPieces(pieces, "facialHair", species.FacialHair, instance, instance.HairColor);
-            AddFieldPieces(pieces, "facialDetail", species.FacialDetail, instance, instance.FacialDetailColor);
-            AddFieldPieces(pieces, "frontArm", species.FrontArm, instance, instance.SkinColor);
+            // A species_extra_parts.csv row gives a part its own color (plan E4); otherwise the old default.
+            Color Part(string column, Color fallback) => instance.ColorFor(RuleFor(species, column), fallback);
+
+            AddFieldPieces(pieces, "backArm", species.BackArm, instance, Part("back_arm", instance.SkinColor));
+            AddFieldPieces(pieces, "legs", species.Legs, instance, Part("legs", instance.SkinColor));
+            AddFieldPieces(pieces, "body", species.Body, instance, Part("body", instance.SkinColor));
+            AddFieldPieces(pieces, "head", species.Head, instance, Part("head", instance.SkinColor));
+            AddFieldPieces(pieces, "ears", species.Ears, instance, Part("ears", instance.SkinColor));
+            AddFieldPieces(pieces, "eyes", species.Eyes, instance, Part("eyes", instance.EyesColor));
+            AddFieldPieces(pieces, "nose", species.Nose, instance, Part("nose", instance.SkinColor));
+            AddFieldPieces(pieces, "mouth", species.Mouth, instance, Part("mouth", instance.SkinColor));
+            AddFieldPieces(pieces, "facialHair", species.FacialHair, instance, Part("facial_hair", instance.HairColor));
+            AddFieldPieces(pieces, "facialDetail", species.FacialDetail, instance, Part("facial_detail", instance.FacialDetailColor));
+            AddFieldPieces(pieces, "frontArm", species.FrontArm, instance, Part("front_arm", instance.SkinColor));
 
             if (!string.IsNullOrEmpty(instance.ChosenHairGroup))
                 AddFieldPieces(pieces, "hair", instance.ChosenHairGroup, instance, instance.HairColor);
 
-            if (species.OtherBodyParts != null)
+            foreach (var rule in species.PartRules ?? System.Array.Empty<SpeciesPartRule>())
             {
-                foreach (var part in species.OtherBodyParts)
-                    AddFieldPieces(pieces, "otherBodyParts", part, instance, instance.SkinColor);
+                if (!rule.IsExtra || instance.OmittedExtras.Contains(rule.Part)) continue;
+                AddFieldPieces(pieces, "otherBodyParts", rule.Part, instance, instance.ColorFor(rule, instance.SkinColor));
             }
 
             pieces.Sort((a, b) => a.Layer.CompareTo(b.Layer));
@@ -93,13 +93,13 @@ namespace Starquill.Display
             {
                 case ImageTokenKind.Static:
                 {
-                    var tint = CalculateSpeciesTint(fieldName, parsed.Layer, baseColor, instance);
+                    var tint = baseColor;
                     pieces.Add(new DisplayPiece(parsed.Layer, parsed.ToSpeciesSpritePath(), tint));
                     break;
                 }
                 case ImageTokenKind.ModularFull:
                 {
-                    var tint = CalculateSpeciesTint(fieldName, parsed.Layer, baseColor, instance);
+                    var tint = baseColor;
                     pieces.Add(new DisplayPiece(parsed.Layer, parsed.ToSpeciesSpritePath(), tint));
                     break;
                 }
@@ -112,7 +112,7 @@ namespace Starquill.Display
 
                     foreach (int layer in layers)
                     {
-                        var tint = CalculateSpeciesTint(fieldName, layer, baseColor, instance);
+                        var tint = baseColor;
                         string path = ImageToken.BuildModularSpeciesPath(parsed.GroupType, imageNum, layer);
                         pieces.Add(new DisplayPiece(layer, path, tint));
                     }
@@ -121,13 +121,13 @@ namespace Starquill.Display
             }
         }
 
-        private Color CalculateSpeciesTint(string fieldName, int layer, Color baseColor, SpeciesInstanceData instance)
+        /// The species' rule for a species.csv part column, or null.
+        public static SpeciesPartRule RuleFor(SpeciesDisplayData species, string column)
         {
-            if (HairFields.Contains(fieldName) || EyesFields.Contains(fieldName) || FacialDetailFields.Contains(fieldName))
-                return baseColor;
-
-            var variance = instance.GetVarianceColor(layer);
-            return variance != Color.white ? variance : baseColor;
+            if (species.PartRules == null) return null;
+            foreach (var r in species.PartRules)
+                if (!r.IsExtra && r.Part == column) return r;
+            return null;
         }
 
         private void BuildEquipmentPieces(EquipmentDisplayInfo item, EquipmentDisplayData eqData, List<DisplayPiece> pieces)

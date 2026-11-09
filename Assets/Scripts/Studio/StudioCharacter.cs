@@ -82,7 +82,8 @@ namespace Starquill.Studio
                 HairColor = b.HairColor,
                 EyesColor = b.EyesColor,
                 FacialDetailColor = b.FacialDetailColor,
-                SkinVarianceColors = new Dictionary<int, Color>(b.SkinVarianceColors),
+                PartColors = new Dictionary<string, Color>(b.PartColors),
+                OmittedExtras = new HashSet<string>(b.OmittedExtras),
                 ModularImageNums = new Dictionary<string, string>(b.ModularImageNums),
                 XScale = b.XScale,
                 YScale = b.YScale,
@@ -112,9 +113,9 @@ namespace Starquill.Studio
                 FacialDetail = HideFacialDetail ? "" : s.FacialDetail,
                 FacialHair = HideFacialHair ? "" : s.FacialHair,
                 FrontArm = s.FrontArm, Head = s.Head, Legs = s.Legs, Mouth = s.Mouth, Nose = s.Nose,
-                Hair = s.Hair, OtherBodyParts = s.OtherBodyParts, ItemRestrictions = s.ItemRestrictions,
+                Hair = s.Hair, PartRules = s.PartRules, ItemRestrictions = s.ItemRestrictions,
                 SkinColor = s.SkinColor, HairColor = s.HairColor, EyesColor = s.EyesColor,
-                FacialDetailColor = s.FacialDetailColor, SkinVarianceSets = s.SkinVarianceSets,
+                FacialDetailColor = s.FacialDetailColor,
                 XScale = s.XScale, YScale = s.YScale, HeadYOffset = s.HeadYOffset, HeadZoom = s.HeadZoom
             };
         }

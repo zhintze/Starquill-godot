@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Starquill.Display;
+using UnityEngine;
 
 namespace Starquill.Studio
 {
@@ -35,8 +37,8 @@ namespace Starquill.Studio
             var list = new List<BodyPart>();
             var seen = new HashSet<string>();
             foreach (var (field, label, get) in Fields) Add(field, label, get(s));
-            if (s.OtherBodyParts != null)
-                foreach (var token in s.OtherBodyParts) Add("otherBodyParts", "Other part", token);
+            foreach (var rule in s.PartRules ?? Array.Empty<SpeciesPartRule>())
+                if (rule.IsExtra) Add("otherBodyParts", ExtraLabel, rule.Part);
             return list;
 
             void Add(string field, string label, string token)
@@ -74,9 +76,42 @@ namespace Starquill.Studio
             }
         }
 
-        /// Labels of the parts drawn on these layers (a skin variance row's name).
-        public static List<string> PartsOn(SpeciesDisplayData species, DisplayDataRegistry registry, string hairGroup, IEnumerable<int> layers) =>
-            HiddenBy(species, registry, hairGroup, layers);
+        public const string ExtraLabel = "Extra part";
+
+        /// species.csv part column -> plain words.
+        public static readonly Dictionary<string, string> ColumnLabels = new Dictionary<string, string>
+        {
+            { "back_arm", "Back arm" }, { "legs", "Legs" }, { "body", "Body" }, { "head", "Head" }, { "front_arm", "Front arm" },
+            { "eyes", "Eyes" }, { "nose", "Nose" }, { "mouth", "Mouth" }, { "ears", "Ears" },
+            { "facial_hair", "Facial hair" }, { "facial_detail", "Facial detail" }
+        };
+
+        /// Parts that roll one color from their own palette (species_extra_parts.csv).
+        public sealed class ColorGroup
+        {
+            public string Key;
+            public Color[] Palette;
+            public readonly List<string> Labels = new List<string>();
+        }
+
+        /// One entry per palette color group of the species, in file order.
+        public static List<ColorGroup> ColorGroups(SpeciesDisplayData s)
+        {
+            var list = new List<ColorGroup>();
+            foreach (var rule in s.PartRules ?? Array.Empty<SpeciesPartRule>())
+            {
+                if (rule.Palette == null || rule.Palette.Length == 0) continue;
+                var group = list.Find(g => g.Key == rule.ColorKey);
+                if (group == null) list.Add(group = new ColorGroup { Key = rule.ColorKey, Palette = rule.Palette });
+                string label = rule.IsExtra ? ExtraLabel : ColumnLabels.TryGetValue(rule.Part, out var l) ? l : rule.Part;
+                if (!group.Labels.Contains(label)) group.Labels.Add(label);
+            }
+            return list;
+        }
+
+        /// Extras that are only sometimes drawn (chance below 1).
+        public static List<SpeciesPartRule> OptionalExtras(SpeciesDisplayData s) =>
+            (s.PartRules ?? Array.Empty<SpeciesPartRule>()).Where(r => r.IsExtra && r.Chance < 1f).ToList();
 
         /// Labels of the parts drawn on one of these layers: the gear row's
         /// "hides ..." note. species is what is drawn (StudioCharacter.SpeciesView).
@@ -86,8 +121,8 @@ namespace Starquill.Studio
             var result = new List<string>();
             if (hidden.Count == 0) return result;
             foreach (var (_, label, get) in Fields) Check(label, get(species));
-            if (species.OtherBodyParts != null)
-                foreach (var token in species.OtherBodyParts) Check("Other part", token);
+            foreach (var rule in species.PartRules ?? Array.Empty<SpeciesPartRule>())
+                if (rule.IsExtra) Check(ExtraLabel, rule.Part);
             Check("Hair", hairGroup);
             return result;
 

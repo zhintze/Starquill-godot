@@ -45,12 +45,23 @@ namespace Starquill.Tests.Studio
         }
 
         [Test]
-        public void PartsOn_CentaurVarianceLayer_IsTheLegs()
+        public void ColorGroups_CentaurLegs_SatyrFurAndHorns()
         {
-            var centaur = D.Registry.Species["centaur"];
-            var set = centaur.SkinVarianceSets.Single(); // species_skin_variance.csv: centaur,37
+            var centaur = BodyParts.ColorGroups(D.Registry.Species["centaur"]).Single();
+            CollectionAssert.AreEqual(new[] { "Legs" }, centaur.Labels);
 
-            CollectionAssert.Contains(BodyParts.PartsOn(centaur, D.Registry, null, set.Indices), "Legs");
+            var satyr = BodyParts.ColorGroups(D.Registry.Species["satyr"]);
+            Assert.AreEqual(2, satyr.Count); // fur (legs + tail), horns (horns + hooves)
+            CollectionAssert.AreEqual(new[] { "Legs", BodyParts.ExtraLabel }, satyr[0].Labels);
+            CollectionAssert.AreEqual(new[] { BodyParts.ExtraLabel }, satyr[1].Labels);
+        }
+
+        [Test]
+        public void Extras_AreListed_FromTheExtraPartsTable()
+        {
+            var angel = D.Registry.Species["angel"];
+            CollectionAssert.AreEqual(new[] { "0014-002", "0014-134" }, angel.PartRules.Where(r => r.IsExtra).Select(r => r.Part));
+            Assert.IsEmpty(BodyParts.OptionalExtras(angel));
         }
 
         [Test]

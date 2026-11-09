@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,14 +11,26 @@ namespace Starquill.Display
         public Color HairColor = Color.white;
         public Color EyesColor = Color.white;
         public Color FacialDetailColor = Color.white;
-        public Dictionary<int, Color> SkinVarianceColors = new();
+        /// Rolled color per SpeciesPartRule.ColorKey (rules with a palette).
+        public Dictionary<string, Color> PartColors = new();
+        /// Extras rolled absent (SpeciesPartRule.Chance below 1).
+        public HashSet<string> OmittedExtras = new();
         public Dictionary<string, string> ModularImageNums = new();
         public float XScale = 1f, YScale = 1f;
         public string ChosenHairGroup;
 
-        public Color GetVarianceColor(int layer)
+        /// The color a part draws in: its rule's color, else fallback (plan E4).
+        public Color ColorFor(SpeciesPartRule rule, Color fallback)
         {
-            return SkinVarianceColors.TryGetValue(layer, out var color) ? color : Color.white;
+            if (rule == null) return fallback;
+            switch (rule.ColorSource)
+            {
+                case SpeciesPartRule.Skin: return SkinColor;
+                case SpeciesPartRule.HairColor: return HairColor;
+                case SpeciesPartRule.EyesColor: return EyesColor;
+                case SpeciesPartRule.FacialDetailColor: return FacialDetailColor;
+                default: return PartColors.TryGetValue(rule.ColorKey, out var c) ? c : fallback;
+            }
         }
 
         public static SpeciesInstanceData CreateFrom(SpeciesDisplayData species, DisplayDataRegistry registry, System.Random rng = null)
@@ -48,22 +61,22 @@ namespace Starquill.Display
                 : colors.GetPalette("main");
             instance.FacialDetailColor = fdPalette[rng?.Next(fdPalette.Length) ?? Random.Range(0, fdPalette.Length)];
 
-            if (species.SkinVarianceSets != null)
+            // One roll per palette color group, in file order (plan E3: same rolls as the old layer rules).
+            foreach (var rule in species.PartRules ?? System.Array.Empty<SpeciesPartRule>())
             {
-                foreach (var set in species.SkinVarianceSets)
-                {
-                    if (set == null || set.HexColors == null || set.HexColors.Length == 0) continue;
-                    var hex = set.HexColors[rng?.Next(set.HexColors.Length) ?? Random.Range(0, set.HexColors.Length)];
-                    var color = ColorManager.ParseHex(hex);
-                    if (set.Indices != null)
-                    {
-                        foreach (int layer in set.Indices)
-                            instance.SkinVarianceColors[layer] = color;
-                    }
-                }
+                if (rule.Palette == null || rule.Palette.Length == 0 || instance.PartColors.ContainsKey(rule.ColorKey)) continue;
+                instance.PartColors[rule.ColorKey] = rule.Palette[rng?.Next(rule.Palette.Length) ?? Random.Range(0, rule.Palette.Length)];
             }
 
             PickModularNums(instance, species, registry, rng);
+
+            // Optional extras last, so species without them roll exactly as before.
+            foreach (var rule in species.PartRules ?? System.Array.Empty<SpeciesPartRule>())
+            {
+                if (!rule.IsExtra || rule.Chance >= 1f) continue;
+                double roll = rng?.NextDouble() ?? Random.value;
+                if (roll >= rule.Chance) instance.OmittedExtras.Add(rule.Part);
+            }
 
             return instance;
         }
@@ -85,9 +98,9 @@ namespace Starquill.Display
                     instance.ModularImageNums[parsed.GroupType] = registry.PickModularImageNum(parsed.GroupType, rng);
             }
 
-            if (species.OtherBodyParts != null)
+            if (species.PartRules != null)
             {
-                foreach (var token in species.OtherBodyParts)
+                foreach (var token in species.PartRules.Where(r => r.IsExtra).Select(r => r.Part))
                 {
                     if (string.IsNullOrEmpty(token)) continue;
                     var parsed = ImageToken.Parse(token);

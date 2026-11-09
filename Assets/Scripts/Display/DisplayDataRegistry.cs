@@ -12,22 +12,36 @@ namespace Starquill.Display
         public string BackArm, Body, Ears, Eyes, FacialDetail, FacialHair;
         public string FrontArm, Head, Legs, Mouth, Nose;
         public string[] Hair;
-        public string[] OtherBodyParts;
         public string[] ItemRestrictions;
         public string[] SkinColor;
         public string[] HairColor;
         public string[] EyesColor;
         public string[] FacialDetailColor;
-        public SkinVarianceSet[] SkinVarianceSets;
+        /// species_extra_parts.csv rows of this species, in file order:
+        /// extra drawings and species parts with their own color.
+        public SpeciesPartRule[] PartRules = System.Array.Empty<SpeciesPartRule>();
         public float XScale = 1f, YScale = 1f;
         public float HeadYOffset;
         public float HeadZoom = 0.5f;
     }
 
-    public class SkinVarianceSet
+    /// One species_extra_parts.csv row (docs/plans/2026-11-08-species-extra-parts-plan.md).
+    public class SpeciesPartRule
     {
-        public string[] HexColors;
-        public int[] Indices;
+        public const string Skin = "skin", HairColor = "hair", EyesColor = "eyes", FacialDetailColor = "facial_detail";
+
+        /// A species.csv part column (legs, mouth, facial_detail, ...) or, for
+        /// an extra, its drawing: body image, part group or full part token.
+        public string Part;
+        public bool IsExtra;
+        /// skin, hair, eyes, facial_detail, or a palette name.
+        public string ColorSource;
+        /// The palette's colors when ColorSource is a palette; null otherwise.
+        public Color[] Palette;
+        /// Rules of one species with the same key share one rolled color.
+        public string ColorKey;
+        /// Extras only: how often the part is drawn (1 = always).
+        public float Chance = 1f;
     }
 
     public class EquipmentDisplayData
@@ -67,7 +81,8 @@ namespace Starquill.Display
             SpeciesLayerMappings = new Dictionary<string, int[]>();
             Colors.LoadPalettes(data.palettes);
 
-            var hexByPalette = data.palettes.ToDictionary(p => p.name, p => p.hex);
+            var paletteColors = data.palettes.ToDictionary(p => p.name, p => p.hex.Select(ColorManager.ParseHex).ToArray());
+            var partColumns = new HashSet<string>(ArtTablesConverter.PartColumns);
 
             foreach (var g in data.partGroups)
             {
@@ -103,14 +118,22 @@ namespace Starquill.Display
                     BackArm = s.backArm, Body = s.body, Ears = s.ears, Eyes = s.eyes,
                     FacialDetail = s.facialDetail, FacialHair = s.facialHair, FrontArm = s.frontArm,
                     Head = s.head, Legs = s.legs, Mouth = s.mouth, Nose = s.nose,
-                    Hair = s.hairGroups, OtherBodyParts = s.otherBodyParts, ItemRestrictions = s.itemRestrictions,
+                    Hair = s.hairGroups, ItemRestrictions = s.itemRestrictions,
                     SkinColor = PaletteField(s.skinPalette),
                     HairColor = PaletteField(s.hairPalette),
                     EyesColor = PaletteField(s.eyePalette),
                     FacialDetailColor = PaletteField(s.facialDetailPalette),
-                    SkinVarianceSets = data.skinVariance
-                        .Where(v => v.species == s.name && hexByPalette.ContainsKey(v.palette))
-                        .Select(v => new SkinVarianceSet { HexColors = hexByPalette[v.palette], Indices = v.layers })
+                    PartRules = data.speciesExtraParts
+                        .Where(x => x.species == s.name)
+                        .Select(x => new SpeciesPartRule
+                        {
+                            Part = x.part,
+                            IsExtra = !partColumns.Contains(x.part),
+                            ColorSource = x.color,
+                            Palette = paletteColors.TryGetValue(x.color ?? "", out var pc) ? pc : null,
+                            ColorKey = string.IsNullOrEmpty(x.colorGroup) ? x.part : x.colorGroup,
+                            Chance = x.chance
+                        })
                         .ToArray(),
                     XScale = s.xScale, YScale = s.yScale, HeadYOffset = s.headYOffset, HeadZoom = s.headZoom
                 };

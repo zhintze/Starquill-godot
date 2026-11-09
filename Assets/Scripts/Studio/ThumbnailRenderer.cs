@@ -58,7 +58,9 @@ namespace Starquill.Studio
                 case "facialHair": s.FacialHair = token; break;
                 case "facialDetail": s.FacialDetail = token; break;
                 case "frontArm": s.FrontArm = token; break;
-                case "otherBodyParts": s.OtherBodyParts = new[] { token }; break;
+                case "otherBodyParts":
+                    s.PartRules = new[] { new SpeciesPartRule { Part = token, IsExtra = true, ColorSource = SpeciesPartRule.Skin, ColorKey = token } };
+                    break;
             }
             display.RebuildFromData(b, s, null, builder);
             return Capture();

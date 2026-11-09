@@ -7,7 +7,7 @@ using Starquill.Data.Art;
 
 namespace Starquill.Studio
 {
-    public enum TableKind { ItemTypes, Weapons, Species, PartGroups }
+    public enum TableKind { ItemTypes, Weapons, Species, PartGroups, ExtraParts }
 
     /// What a Library save or remove did.
     public sealed class LibraryResult
@@ -40,6 +40,7 @@ namespace Starquill.Studio
                 case TableKind.ItemTypes: return ArtTablesConverter.EquipmentFile;
                 case TableKind.Weapons: return ArtTablesConverter.WeaponsFile;
                 case TableKind.Species: return ArtTablesConverter.SpeciesFile;
+                case TableKind.ExtraParts: return ArtTablesConverter.ExtraPartsFile;
                 default: return ArtTablesConverter.SpeciesPartsFile;
             }
         }
@@ -75,6 +76,12 @@ namespace Starquill.Studio
             foreach (var f in files.Values) f.Reload();
         }
 
+        /// Columns that make a row's key: species + part for extra parts, else the code.
+        public static int KeyColumns(TableKind kind) => kind == TableKind.ExtraParts ? 2 : 1;
+
+        public static string KeyOf(TableKind kind, string[] row) =>
+            kind == TableKind.ExtraParts ? $"{row[0]} / {(row.Length > 1 ? row[1] : "")}" : row[0];
+
         /// Next free code with this prefix: hd -> hd14 when hd01-hd13 exist.
         public string NextCode(TableKind kind, string prefix)
         {
@@ -102,6 +109,8 @@ namespace Starquill.Studio
                     return Regex.IsMatch(key, @"^w\d{2}$") ? null : $"'{key}' is not a weapon code: w and two digits, like w10.";
                 case TableKind.PartGroups:
                     return Regex.IsMatch(key, @"^[a-z]\d{2}$") ? null : $"'{key}' is not a part group code: one letter and two digits, like f07.";
+                case TableKind.ExtraParts:
+                    return key.StartsWith(" /") || key.EndsWith("/ ") ? "Species and part must both be filled in." : null;
                 default:
                     return Regex.IsMatch(key, @"^[a-z][a-z \-]*$") ? null : $"'{key}' is not a species name: lowercase letters, spaces and dashes.";
             }
@@ -121,15 +130,15 @@ namespace Starquill.Studio
             }
 
             var cells = Normalize(row, file.Table.Header.Length);
-            string key = cells[0];
+            string key = KeyOf(kind, cells);
             string keyProblem = CheckKey(kind, key);
             if (keyProblem != null) return Fail(result, keyProblem);
 
             var table = Copy(file.Table);
-            int index = originalKey == null ? -1 : Find(table, originalKey);
+            int index = originalKey == null ? -1 : Find(kind, table, originalKey);
             if (originalKey != null && index < 0) return Fail(result, $"{originalKey} is no longer in {FileName(kind)}; press Rescan.");
             if (originalKey != null && key != originalKey) return Fail(result, "A code cannot be renamed; remove it and add a new one.");
-            if (originalKey == null && Find(table, key) >= 0) return Fail(result, $"{key} already exists in {FileName(kind)}.");
+            if (originalKey == null && Find(kind, table, key) >= 0) return Fail(result, $"{key} already exists in {FileName(kind)}.");
 
             if (index >= 0) table.Rows[index] = cells;
             else table.Rows.Add(cells);
@@ -163,7 +172,7 @@ namespace Starquill.Studio
                 return result;
             }
             var table = Copy(file.Table);
-            int index = Find(table, key);
+            int index = Find(kind, table, key);
             if (index < 0) return Fail(result, $"{key} is not in {FileName(kind)}.");
             table.Rows.RemoveAt(index);
 
@@ -213,9 +222,9 @@ namespace Starquill.Studio
             return copy;
         }
 
-        private static int Find(CsvTable t, string key)
+        private static int Find(TableKind kind, CsvTable t, string key)
         {
-            for (int i = 0; i < t.Rows.Count; i++) if (t.Rows[i][0] == key) return i;
+            for (int i = 0; i < t.Rows.Count; i++) if (KeyOf(kind, t.Rows[i]) == key) return i;
             return -1;
         }
 
@@ -230,6 +239,7 @@ namespace Starquill.Studio
                 case TableKind.ItemTypes: sources.EquipmentCsv = newText; break;
                 case TableKind.Weapons: sources.WeaponsCsv = newText; break;
                 case TableKind.Species: sources.SpeciesCsv = newText; break;
+                case TableKind.ExtraParts: sources.ExtraPartsCsv = newText; break;
                 default: sources.SpeciesPartsCsv = newText; break;
             }
             var after = ArtTablesConverter.Convert(sources).Issues.Where(i => i.level == ArtIssueLevel.Error).ToList();

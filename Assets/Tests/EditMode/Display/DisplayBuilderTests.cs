@@ -29,13 +29,12 @@ namespace Starquill.Tests.Display
                 Hair = new[] { "h01" },
                 FacialHair = "",
                 FacialDetail = "",
-                OtherBodyParts = new string[0],
                 ItemRestrictions = new string[0],
                 SkinColor = new[] { "FFFFFF" },
                 HairColor = new[] { "FF0000" },
                 EyesColor = new[] { "0000FF" },
                 FacialDetailColor = new[] { "FFFFFF" },
-                SkinVarianceSets = new SkinVarianceSet[0],
+                PartRules = new SpeciesPartRule[0],
                 XScale = 1f,
                 YScale = 1f
             };
@@ -166,7 +165,6 @@ namespace Starquill.Tests.Display
                 HairColor = Color.red,
                 EyesColor = Color.blue,
                 FacialDetailColor = Color.white,
-                SkinVarianceColors = new Dictionary<int, Color>(),
                 ModularImageNums = new Dictionary<string, string>
                 {
                     { "f01", "0001" }, { "f02", "0001" }, { "f03", "0001" }, { "h01", "0001" }

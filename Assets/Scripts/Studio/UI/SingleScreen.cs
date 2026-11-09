@@ -319,21 +319,25 @@ namespace Starquill.Studio.UI
                 ColorButton(row, c.Body.FacialDetailColor, "Facial detail color", Palette(sp.FacialDetailColor, true), col => c.Body.FacialDetailColor = col);
             }
 
-            // Species parts with their own random color (species_skin_variance.csv), e.g. a centaur's horse body.
-            foreach (var set in sp.SkinVarianceSets ?? Array.Empty<SkinVarianceSet>())
+            // Parts with their own palette (species_extra_parts.csv), e.g. a centaur's horse body or a satyr's horns.
+            foreach (var group in BodyParts.ColorGroups(sp))
             {
-                if (set?.Indices == null || set.Indices.Length == 0 || set.HexColors == null || set.HexColors.Length == 0) continue;
-                var layers = set.Indices;
-                var parts = BodyParts.PartsOn(sp, Data.Registry, c.Body.ChosenHairGroup, layers);
-                string name = parts.Count > 0 ? string.Join(", ", parts) : "Layers " + string.Join(" ", layers);
-                row = Row(parts.Count == 1 ? parts[0] + " color" : "Extra color");
-                var palette = set.HexColors.Select(ColorManager.ParseHex).ToArray();
-                Color currentColor = c.Body.SkinVarianceColors.TryGetValue(layers[0], out var cc) ? cc : Color.white;
-                ColorButton(row, currentColor, $"{name} color", palette, col =>
+                var g = group;
+                string names = string.Join(", ", g.Labels);
+                row = Row(g.Labels.Count == 1 && g.Labels[0] != BodyParts.ExtraLabel ? g.Labels[0] + " color" : "Extra color");
+                Color currentColor = c.Body.PartColors.TryGetValue(g.Key, out var cc) ? cc : Color.white;
+                ColorButton(row, currentColor, $"{names} color", g.Palette, col => c.Body.PartColors[g.Key] = col);
+                StudioUi.Label(row, names, 16f);
+            }
+            foreach (var extra in BodyParts.OptionalExtras(sp))
+            {
+                var e = extra;
+                row = Row(BodyParts.ExtraLabel);
+                StudioUi.Toggle(row, $"Show {e.Part} ({e.Chance:0%} of rolls)", !c.Body.OmittedExtras.Contains(e.Part), on => Change(() =>
                 {
-                    foreach (int layer in layers) c.Body.SkinVarianceColors[layer] = col;
-                });
-                StudioUi.Label(row, $"{name} (layers {string.Join(" ", layers)})", 16f);
+                    if (on) c.Body.OmittedExtras.Remove(e.Part);
+                    else c.Body.OmittedExtras.Add(e.Part);
+                }), 360f);
             }
 
             foreach (var part in BodyParts.Editable(sp))

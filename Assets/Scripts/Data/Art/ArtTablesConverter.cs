@@ -15,7 +15,7 @@ namespace Starquill.Data.Art
         public const string WeaponsFile = "weapons.csv";
         public const string SpeciesFile = "species.csv";
         public const string SpeciesPartsFile = "species_parts.csv";
-        public const string SkinVarianceFile = "species_skin_variance.csv";
+        public const string ExtraPartsFile = "species_extra_parts.csv";
         public const string PalettesFile = "palettes.csv";
 
         private static readonly Regex ItemTypeRx = new Regex(@"^[a-z]{2}\d{2}$");
@@ -30,7 +30,7 @@ namespace Starquill.Data.Art
             ConvertWeapons(Open(src.WeaponsCsv, WeaponsFile, r), files, r);
             ConvertPartGroups(Open(src.SpeciesPartsCsv, SpeciesPartsFile, r), files, r);
             ConvertSpecies(Open(src.SpeciesCsv, SpeciesFile, r), files, r);
-            ConvertSkinVariance(Open(src.SkinVarianceCsv, SkinVarianceFile, r), r);
+            ConvertExtraParts(Open(src.ExtraPartsCsv, ExtraPartsFile, r), files, r);
 
             files.ReportUnusedFolders(r.Issues);
             return r;
@@ -151,14 +151,14 @@ namespace Starquill.Data.Art
         private static readonly Regex BodyTokenRx = new Regex(@"^\d{4}-\d{3}$");
         private static readonly Regex FullPartTokenRx = new Regex(@"^([a-z]\d{2})-(\d{4})-(\d{3})$");
 
-        private static readonly string[] PartColumns =
+        public static readonly string[] PartColumns =
             { "back_arm", "legs", "body", "head", "front_arm", "eyes", "nose", "mouth", "ears", "facial_hair", "facial_detail" };
 
         private static void ConvertSpecies(Table t, FileIndex files, ArtBakeResult r)
         {
             var required = new List<string> { "name", "x_scale", "y_scale", "head_y_offset", "head_zoom" };
             required.AddRange(PartColumns);
-            required.AddRange(new[] { "hair_groups", "other_body_parts", "skin_palette", "hair_palette", "eye_palette", "facial_detail_palette", "item_restrictions" });
+            required.AddRange(new[] { "hair_groups", "skin_palette", "hair_palette", "eye_palette", "facial_detail_palette", "item_restrictions" });
             if (t == null || !t.Require(required.ToArray())) return;
 
             var groups = new HashSet<string>(r.Data.partGroups.Select(g => g.group));
@@ -183,8 +183,11 @@ namespace Starquill.Data.Art
                     ok &= CheckPartToken(t, i, column, t.Text(i, column), files, groups);
                 var hair = ArtCells.Strings(t.Text(i, "hair_groups"));
                 foreach (var g in hair) ok &= CheckPartToken(t, i, "hair_groups", g, files, groups);
-                var other = ArtCells.Strings(t.Text(i, "other_body_parts"));
-                foreach (var g in other) ok &= CheckPartToken(t, i, "other_body_parts", g, files, groups);
+                if (t.Text(i, "other_body_parts").Length > 0)
+                {
+                    t.Error(i, $"other_body_parts moved to {ExtraPartsFile} (one row per part); delete this column");
+                    ok = false;
+                }
 
                 string skin = t.Text(i, "skin_palette");
                 if (skin.Length == 0) { t.Error(i, "skin_palette is blank"); ok = false; }
@@ -206,7 +209,7 @@ namespace Starquill.Data.Art
                     head = t.Text(i, "head"), frontArm = t.Text(i, "front_arm"),
                     eyes = t.Text(i, "eyes"), nose = t.Text(i, "nose"), mouth = t.Text(i, "mouth"),
                     ears = t.Text(i, "ears"), facialHair = t.Text(i, "facial_hair"), facialDetail = t.Text(i, "facial_detail"),
-                    hairGroups = hair, otherBodyParts = other, itemRestrictions = restrictions,
+                    hairGroups = hair, itemRestrictions = restrictions,
                     skinPalette = skin, hairPalette = t.Text(i, "hair_palette"),
                     eyePalette = t.Text(i, "eye_palette"), facialDetailPalette = t.Text(i, "facial_detail_palette")
                 });
@@ -248,18 +251,67 @@ namespace Starquill.Data.Art
             return false;
         }
 
-        private static void ConvertSkinVariance(Table t, ArtBakeResult r)
+        public static readonly string[] ColorSources = { "skin", "hair", "eyes", "facial_detail" };
+
+        /// species_extra_parts.csv (plan E1-E3): extras and own-colored species parts.
+        private static void ConvertExtraParts(Table t, FileIndex files, ArtBakeResult r)
         {
-            if (t == null || !t.Require("species", "layers", "palette")) return;
+            if (t == null || !t.Require("species", "part", "color", "color_group", "chance")) return;
             var species = new HashSet<string>(r.Data.species.Select(s => s.name));
+            var groups = new HashSet<string>(r.Data.partGroups.Select(g => g.group));
             var palettes = new HashSet<string>(r.Data.palettes.Select(p => p.name));
+            var seen = new HashSet<(string, string)>();
+            var groupColors = new Dictionary<(string, string), string>();
+
             for (int i = 0; i < t.Count; i++)
             {
-                string name = t.Text(i, "species"), palette = t.Text(i, "palette");
+                string name = t.Text(i, "species"), part = t.Text(i, "part"), color = t.Text(i, "color"), group = t.Text(i, "color_group");
                 if (!species.Contains(name)) { t.Error(i, $"species '{name}' is not in species.csv"); continue; }
-                if (!palettes.Contains(palette)) { t.Error(i, $"palette '{palette}' is not in palettes.csv"); continue; }
-                if (!t.Ints(i, "layers", out var layers, required: true)) continue;
-                r.Data.skinVariance.Add(new SkinVarianceRow { species = name, layers = layers, palette = palette });
+                if (part.Length == 0) { t.Error(i, "part is blank"); continue; }
+                if (!seen.Add((name, part))) { t.Error(i, $"{name} lists part {part} twice"); continue; }
+
+                bool speciesPart = PartColumns.Contains(part);
+                if (!speciesPart)
+                {
+                    if (!BodyTokenRx.IsMatch(part) && !GroupRx.IsMatch(part) && !FullPartTokenRx.IsMatch(part))
+                    {
+                        t.Error(i, $"part '{part}' must be a species.csv part column (legs, mouth, ...) or look like 0001-016, f01 or f01-0001-084");
+                        continue;
+                    }
+                    if (!CheckPartToken(t, i, "part", part, files, groups)) continue;
+                }
+
+                if (!ColorSources.Contains(color) && !palettes.Contains(color))
+                {
+                    t.Error(i, $"color '{color}' must be skin, hair, eyes, facial_detail or a palette in palettes.csv");
+                    continue;
+                }
+                if (group.Length > 0)
+                {
+                    if (groupColors.TryGetValue((name, group), out var other) && other != color)
+                    {
+                        t.Error(i, $"color group {group} of {name} names two colors ({other} and {color})");
+                        continue;
+                    }
+                    groupColors[(name, group)] = color;
+                }
+
+                string chanceText = t.Text(i, "chance");
+                if (!ArtCells.TryFloat(chanceText, 1f, out float chance) || chance < 0f || chance > 1f)
+                {
+                    t.Error(i, $"chance '{chanceText}' must be blank (always) or a number from 0 to 1");
+                    continue;
+                }
+                if (speciesPart && chanceText.Length > 0)
+                {
+                    t.Error(i, $"chance is only for extra parts; {part} is part of the species");
+                    continue;
+                }
+
+                r.Data.speciesExtraParts.Add(new SpeciesExtraPartRow
+                {
+                    species = name, part = part, color = color, colorGroup = group, chance = chance
+                });
             }
         }
 

@@ -20,7 +20,9 @@ namespace Starquill.Studio.UI
             { "hand_type", "Hands: one_handed or two_handed" }, { "modular", "Separate parts per layer: y or n" },
             { "x_scale", "Width scale (not drawn yet)" }, { "y_scale", "Height scale (not drawn yet)" },
             { "head_y_offset", "Head y offset (portraits)" }, { "head_zoom", "Head zoom (portraits)" },
-            { "hair_groups", "Hair groups (codes, spaces between)" }, { "other_body_parts", "Other parts (codes)" },
+            { "hair_groups", "Hair groups (codes, spaces between)" }, { "species", "Species" }, { "part", "Part (column, drawing or group)" },
+            { "color", "Color (skin, hair, eyes or palette)" }, { "color_group", "Shares a color with (group)" },
+            { "chance", "Chance 0-1 (blank = always)" },
             { "item_restrictions", "Cannot wear (item codes)" }
         };
 
@@ -38,7 +40,7 @@ namespace Starquill.Studio.UI
 
         public static string KindName(TableKind kind) =>
             kind == TableKind.ItemTypes ? "item type" : kind == TableKind.Weapons ? "weapon type"
-            : kind == TableKind.Species ? "species" : "part group";
+            : kind == TableKind.Species ? "species" : kind == TableKind.ExtraParts ? "extra part rule" : "part group";
 
         /// row null: a new row. onDone gets every successful save or remove.
         public RowFormView(Transform canvas, LibraryEditor editor, TableKind kind, string[] row, Action<LibraryResult> onDone)
@@ -48,7 +50,7 @@ namespace Starquill.Studio.UI
             this.kind = kind;
             this.onDone = onDone;
             var table = editor.Open(kind).Table;
-            originalKey = row?[0];
+            originalKey = row == null ? null : LibraryEditor.KeyOf(kind, row);
             string title = originalKey == null ? $"New {KindName(kind)}" : $"Edit {originalKey} ({LibraryEditor.FileName(kind)})";
             var list = StudioUi.Popup(canvas, title, new Vector2(1000, 900), out close);
 
@@ -60,10 +62,11 @@ namespace Starquill.Studio.UI
                 var line = StudioUi.Row(list, "Field " + column, 42f);
                 StudioUi.Label(line.transform, Labels.TryGetValue(column, out var l) ? l : column.Replace('_', ' '), 18f, 380f);
                 var input = StudioUi.Input(line.transform, row != null && c < row.Length ? row[c] : "", _ => { }, 520f);
-                if (c == 0 && originalKey != null) input.interactable = false; // codes are not renamed (P29)
+                if (originalKey != null && c < LibraryEditor.KeyColumns(kind)) input.interactable = false; // keys are not renamed (P29)
                 inputs.Add(input);
             }
-            if (originalKey == null && kind != TableKind.Species) inputs[0].text = editor.NextCode(kind, DefaultPrefix(table));
+            if (originalKey == null && kind != TableKind.Species && kind != TableKind.ExtraParts)
+                inputs[0].text = editor.NextCode(kind, DefaultPrefix(table));
 
             message = StudioUi.Label(list, "", 18f);
             message.color = StudioUi.ErrorColor;

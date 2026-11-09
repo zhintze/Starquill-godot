@@ -14,7 +14,7 @@ namespace Starquill.Data.Art
         public List<WeaponRow> weapons = new List<WeaponRow>();
         public List<SpeciesRow> species = new List<SpeciesRow>();
         public List<PartGroupRow> partGroups = new List<PartGroupRow>();
-        public List<SkinVarianceRow> skinVariance = new List<SkinVarianceRow>();
+        public List<SpeciesExtraPartRow> speciesExtraParts = new List<SpeciesExtraPartRow>();
         public List<PaletteRow> palettes = new List<PaletteRow>();
     }
 
@@ -61,7 +61,6 @@ namespace Starquill.Data.Art
         public string backArm, legs, body, head, frontArm;
         public string eyes, nose, mouth, ears, facialHair, facialDetail;
         public string[] hairGroups = Array.Empty<string>();
-        public string[] otherBodyParts = Array.Empty<string>();
         public string[] itemRestrictions = Array.Empty<string>();
         public string skinPalette, hairPalette, eyePalette, facialDetailPalette; // blank = main
     }
@@ -75,12 +74,17 @@ namespace Starquill.Data.Art
         public int[] variants = Array.Empty<int>();
     }
 
+    /// species_extra_parts.csv: an extra drawing of a species (part = a body
+    /// image, part group or full part token), or a species.csv part column
+    /// (part = "legs", "mouth", ...) that gets its own color.
     [Serializable]
-    public class SkinVarianceRow
+    public class SpeciesExtraPartRow
     {
         public string species;
-        public int[] layers = Array.Empty<int>();
-        public string palette;
+        public string part;
+        public string color;      // skin, hair, eyes, facial_detail, or a palettes.csv name
+        public string colorGroup; // rows of one species with the same group share one color; blank: own roll
+        public float chance = 1f; // extras only: how often it is drawn
     }
 
     [Serializable]
@@ -111,7 +115,7 @@ namespace Starquill.Data.Art
     /// file path under Assets/Resources/Images, relative and '/'-separated.
     public sealed class ArtSources
     {
-        public string EquipmentCsv, WeaponsCsv, SpeciesCsv, SpeciesPartsCsv, SkinVarianceCsv, PalettesCsv;
+        public string EquipmentCsv, WeaponsCsv, SpeciesCsv, SpeciesPartsCsv, ExtraPartsCsv, PalettesCsv;
         public List<string> ImageFiles = new List<string>();
     }
 

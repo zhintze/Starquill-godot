@@ -20,7 +20,7 @@ namespace Starquill.Data.Art
                 WeaponsCsv = ReadOrNull(tables, ArtTablesConverter.WeaponsFile),
                 SpeciesCsv = ReadOrNull(tables, ArtTablesConverter.SpeciesFile),
                 SpeciesPartsCsv = ReadOrNull(tables, ArtTablesConverter.SpeciesPartsFile),
-                SkinVarianceCsv = ReadOrNull(tables, ArtTablesConverter.SkinVarianceFile),
+                ExtraPartsCsv = ReadOrNull(tables, ArtTablesConverter.ExtraPartsFile),
                 PalettesCsv = ReadOrNull(tables, ArtTablesConverter.PalettesFile),
             };
             if (Directory.Exists(images))

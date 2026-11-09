@@ -18,7 +18,7 @@ namespace Starquill.Studio.UI
         private static readonly (TableKind kind, string label)[] Tabs =
         {
             (TableKind.ItemTypes, "Item types"), (TableKind.Weapons, "Weapons"),
-            (TableKind.Species, "Species"), (TableKind.PartGroups, "Part groups")
+            (TableKind.Species, "Species"), (TableKind.PartGroups, "Part groups"), (TableKind.ExtraParts, "Extra parts")
         };
 
         private readonly StudioApp app;
@@ -88,7 +88,10 @@ namespace Starquill.Studio.UI
                 var r = row;
                 var line = StudioUi.Row(list, "Row " + r[0], 40f);
                 StudioUi.Label(line.transform, r[0], 19f, 160f);
-                StudioUi.Label(line.transform, r.Length > 1 ? r[1] : "", 17f, 760f);
+                string detail = kind == TableKind.ExtraParts && r.Length > 4
+                    ? $"{r[1]}    color {r[2]}" + (r[3].Length > 0 ? $"    shares with {r[3]}" : "") + (r[4].Length > 0 ? $"    chance {r[4]}" : "")
+                    : r.Length > 1 ? r[1] : "";
+                StudioUi.Label(line.transform, detail, 17f, 760f);
                 StudioUi.Button(line.transform, "Edit", () => new RowFormView(canvas, editor, current, (string[])r.Clone(), Saved), 90f);
                 string folder = editor.FolderPath(kind, r[0]);
                 if (folder != null)

@@ -17,6 +17,13 @@ namespace Starquill.Studio
     }
 
     [Serializable]
+    public class PartColorPreset
+    {
+        public string group;
+        public string color;
+    }
+
+    [Serializable]
     public class PartPreset
     {
         public string group;
@@ -42,7 +49,10 @@ namespace Starquill.Studio
         public string skinColor, hairColor, eyeColor, facialDetailColor;
         public string hairGroup;
         public List<PartPreset> parts = new List<PartPreset>();
-        public List<LayerColorPreset> skinVariance = new List<LayerColorPreset>();
+        /// species_extra_parts.csv color groups -> color.
+        public List<PartColorPreset> partColors = new List<PartColorPreset>();
+        /// Optional extras that are not drawn.
+        public List<string> omittedExtras = new List<string>();
         public bool hideFacialHair, hideFacialDetail, locked;
         public List<string> lockedSlots = new List<string>();
         public List<ItemPreset> gear = new List<ItemPreset>();
@@ -108,8 +118,9 @@ namespace Starquill.Studio
             };
             foreach (var kv in c.Body.ModularImageNums.OrderBy(kv => kv.Key, StringComparer.Ordinal))
                 p.parts.Add(new PartPreset { group = kv.Key, variant = kv.Value });
-            foreach (var kv in c.Body.SkinVarianceColors.OrderBy(kv => kv.Key))
-                p.skinVariance.Add(new LayerColorPreset { layer = kv.Key, color = Hex(kv.Value) });
+            foreach (var kv in c.Body.PartColors.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                p.partColors.Add(new PartColorPreset { group = kv.Key, color = Hex(kv.Value) });
+            p.omittedExtras.AddRange(c.Body.OmittedExtras.OrderBy(x => x, StringComparer.Ordinal));
             foreach (var slot in c.LockedSlots.OrderBy(s => s)) p.lockedSlots.Add(slot.ToString());
             foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
             {
@@ -149,8 +160,24 @@ namespace Starquill.Studio
                 XScale = species.XScale,
                 YScale = species.YScale
             };
-            foreach (var lc in p.skinVariance ?? new List<LayerColorPreset>())
-                body.SkinVarianceColors[lc.layer] = ParseColor(lc.color, $"{where} skin layer {lc.layer}", warnings);
+            var rules = species.PartRules ?? Array.Empty<SpeciesPartRule>();
+            foreach (var pc in p.partColors ?? new List<PartColorPreset>())
+            {
+                if (!rules.Any(r => r.ColorKey == pc.group && r.Palette != null))
+                {
+                    warnings.Add($"{where}: {species.Name} has no color group '{pc.group}' any more; left out.");
+                    continue;
+                }
+                body.PartColors[pc.group] = ParseColor(pc.color, $"{where} {pc.group}", warnings);
+            }
+            foreach (var rule in rules) // groups added since the preset was saved
+                if (rule.Palette != null && rule.Palette.Length > 0 && !body.PartColors.ContainsKey(rule.ColorKey))
+                    body.PartColors[rule.ColorKey] = rule.Palette[0];
+            foreach (var part in p.omittedExtras ?? new List<string>())
+            {
+                if (rules.Any(r => r.IsExtra && r.Part == part && r.Chance < 1f)) body.OmittedExtras.Add(part);
+                else warnings.Add($"{where}: {part} is not an optional extra of {species.Name} any more; it is drawn.");
+            }
 
             foreach (var part in p.parts ?? new List<PartPreset>())
             {
