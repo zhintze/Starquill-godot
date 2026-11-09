@@ -47,6 +47,8 @@ public static class CharacterStudioTools
         var mode = PlayerSettings.fullScreenMode;
         int width = PlayerSettings.defaultScreenWidth, height = PlayerSettings.defaultScreenHeight;
         bool resizable = PlayerSettings.resizableWindow;
+        var activeGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+        var activeTarget = EditorUserBuildSettings.activeBuildTarget;
         try
         {
             PlayerSettings.productName = "Starquill Characters";
@@ -79,6 +81,9 @@ public static class CharacterStudioTools
             PlayerSettings.defaultScreenHeight = height;
             PlayerSettings.resizableWindow = resizable;
             AssetDatabase.SaveAssets(); // the build saved the studio values to ProjectSettings.asset; write the game's back
+            // BuildPlayer leaves the Editor on the built platform (on Windows, the IAP package then asks to install the Xbox GDK).
+            if (EditorUserBuildSettings.activeBuildTarget != activeTarget)
+                EditorUserBuildSettings.SwitchActiveBuildTarget(activeGroup, activeTarget);
         }
     }
 }
