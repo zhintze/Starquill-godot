@@ -5,6 +5,7 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 /// Tools > Character Studio: create the studio scene and build the app.
 /// The scene is never added to the game's build scene list.
@@ -39,6 +40,21 @@ public static class CharacterStudioTools
     [MenuItem("Tools/Character Studio/Build Windows")]
     public static void BuildWindows() => Build(BuildTarget.StandaloneWindows64, WindowsPath);
 
+    /// Unity sometimes marks an open scene modified with no real change
+    /// (seen 2026-11-08); a build then stops on a save prompt. A scene whose
+    /// content equals its file is reopened from disk; real changes still prompt.
+    private static void ClearFalseUnsavedFlags()
+    {
+        if (SceneManager.sceneCount != 1) return;
+        var scene = SceneManager.GetActiveScene();
+        if (!scene.isDirty || string.IsNullOrEmpty(scene.path)) return;
+        const string copy = "Assets/__studio_unsaved_check.unity";
+        EditorSceneManager.SaveScene(scene, copy, true);
+        bool same = System.IO.File.ReadAllText(copy) == System.IO.File.ReadAllText(scene.path);
+        AssetDatabase.DeleteAsset(copy);
+        if (same) EditorSceneManager.OpenScene(scene.path, OpenSceneMode.Single);
+    }
+
     public static BuildReport Build(BuildTarget target, string path)
     {
         var named = NamedBuildTarget.Standalone;
@@ -59,6 +75,7 @@ public static class CharacterStudioTools
             PlayerSettings.defaultScreenHeight = 900;
             PlayerSettings.resizableWindow = true;
 
+            ClearFalseUnsavedFlags();
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
