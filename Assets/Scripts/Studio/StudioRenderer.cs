@@ -40,6 +40,14 @@ namespace Starquill.Studio
             return display;
         }
 
+        /// Destroys a preview made by CreatePreview (the Single screen's big preview).
+        public void Release(CharacterDisplay display)
+        {
+            if (display == null) return;
+            owned.Remove(display.gameObject);
+            DiskSpriteSource.Kill(display.gameObject);
+        }
+
         public void Draw(CharacterDisplay display, StudioCharacter c)
         {
             var species = data.Registry.Species[c.SpeciesName];

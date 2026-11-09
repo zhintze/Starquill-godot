@@ -179,6 +179,8 @@ namespace Starquill.Studio.UI
             dd.SetValueWithoutNotify(Mathf.Clamp(value, 0, options.Count - 1));
             dd.captionText.color = TextColor;
             dd.captionText.fontSize = 20f;
+            dd.captionText.textWrappingMode = TextWrappingModes.NoWrap;
+            dd.captionText.overflowMode = TextOverflowModes.Ellipsis;
             dd.itemText.fontSize = 20f;
             dd.onValueChanged.AddListener(i => onChanged(i));
             Size(go, width, 40f);
@@ -256,7 +258,7 @@ namespace Starquill.Studio.UI
         /// Modal window over the whole canvas: a dim backdrop (a click on it
         /// closes), a centered panel with a title and Close, and a scrolling
         /// list. Returns the list; close() removes the window.
-        public static RectTransform Popup(Transform canvasRoot, string title, Vector2 size, out Action close)
+        public static RectTransform Popup(Transform canvasRoot, string title, Vector2 size, out Action close, Action onClosed = null)
         {
             var root = new GameObject("Popup: " + title, typeof(RectTransform));
             root.transform.SetParent(canvasRoot, false);
@@ -266,7 +268,12 @@ namespace Starquill.Studio.UI
             overlay.overrideSorting = true;
             overlay.sortingOrder = 100;
             root.AddComponent<GraphicRaycaster>();
-            Action doClose = () => { if (root != null) UnityEngine.Object.Destroy(root); };
+            Action doClose = () =>
+            {
+                if (root == null) return;
+                UnityEngine.Object.Destroy(root);
+                onClosed?.Invoke();
+            };
             close = doClose;
 
             // The backdrop and the window are siblings, so clicks inside the
