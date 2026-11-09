@@ -12,7 +12,7 @@ namespace Starquill.Studio.UI
     /// The grid of random characters (ported from the Godot randomizer).
     /// Top: Count, Species, Randomize All, Equip Random, Settings, then the
     /// search box and Forced items chips. Bottom: export. Each card: species,
-    /// skin color, Select, Lock, Reroll.
+    /// skin color, Select, Lock, Reroll, Edit.
     public sealed class BulkScreen
     {
         private const int MaxResults = 15;
@@ -39,6 +39,7 @@ namespace Starquill.Studio.UI
         private readonly List<StudioCharacter> characters = new List<StudioCharacter>();
         private readonly List<Card> cards = new List<Card>();
         private readonly Dictionary<ForcedItem, GameObject> chips = new Dictionary<ForcedItem, GameObject>();
+        private readonly RectTransform bulkRoot;
         private readonly RectTransform grid;
         private readonly Transform forceRow;
         private readonly TMP_Text noChips;
@@ -57,7 +58,7 @@ namespace Starquill.Studio.UI
             roller = new StudioRoller(app.Data);
             forced = new ForcedItems(app.Data);
 
-            var root = StudioUi.Panel(parent, "Bulk", StudioUi.Background);
+            var root = bulkRoot = StudioUi.Panel(parent, "Bulk", StudioUi.Background);
             StudioUi.Stretch(root);
 
             var top = StudioUi.Column(root, "TopBars", 8f);
@@ -178,8 +179,9 @@ namespace Starquill.Studio.UI
             StudioUi.Toggle(body.transform, "Select", false, v => { card.Selected = v; UpdateExportButton(); }, 96f);
 
             var row = StudioUi.Row(col.transform, "Buttons", 34f, 6f);
-            card.Lock = StudioUi.Toggle(row.transform, "Lock", false, v => characters[index].Locked = v, 90f);
-            StudioUi.Button(row.transform, "Reroll", () => Reroll(index), 100f);
+            card.Lock = StudioUi.Toggle(row.transform, "Lock", false, v => characters[index].Locked = v, 74f);
+            StudioUi.Button(row.transform, "Reroll", () => Reroll(index), 66f);
+            StudioUi.Button(row.transform, "Edit", () => OpenSingle(index), 56f);
             return card;
         }
 
@@ -235,6 +237,18 @@ namespace Starquill.Studio.UI
             roller.ChangeSpecies(c, Data.SpeciesNames[option], random, rng);
             if (!c.Locked) forced.Apply(c, roller, rng);
             Redraw(i);
+        }
+
+        /// The Single screen on this card's character (P18); Back redraws the card.
+        private void OpenSingle(int i)
+        {
+            search.text = "";
+            bulkRoot.gameObject.SetActive(false);
+            new SingleScreen(canvas, app, characters[i], i + 1, random, () =>
+            {
+                bulkRoot.gameObject.SetActive(true);
+                Redraw(i);
+            });
         }
 
         private void PickSkin(int i)
